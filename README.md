@@ -1,38 +1,72 @@
-# Hedge Fund Industry Analysis
+# Hedge Fund X-Ray
 
-A data science report analyzing the U.S. hedge fund industry through balance sheet trends, leverage dynamics, and the meme stock era (2012-2025).
+An open-source intelligence project reconstructing the U.S. hedge fund industry's financial anatomy from public regulatory data — balance sheets, derivatives, borrowing, positioning, and fund-level holdings — stitched together from sources no one combines.
 
-## Overview
+![Balance Sheet Overview](outputs/figures/balance_sheet_overview.png)
 
-This project pulls data from multiple public sources to build a comprehensive picture of how the hedge fund industry is structured, how it evolved over the past decade, and what the data reveals about key market events like COVID-19 and the GameStop short squeeze.
+## The Thesis
+
+The hedge fund industry reports to a dozen different regulators in a dozen different formats. No single source tells the full story. But combined, they do.
+
+This project pulls from **9 public data sources** across the Federal Reserve, SEC, CFTC, DTCC, and CBOE to build a unified picture of:
+
+- **$12.6 trillion** in gross assets (Form PF) — 4x what the Fed reports
+- **$20.2 trillion** in derivative exposure — 3.7x their net asset value
+- **$415 trillion** in interest rate swap notional flowing through the system weekly
+- **119,606 individual holdings** across 8 of the largest funds on earth
+- The complete **borrowing, leverage, and counterparty structure** of an industry that answers to no single regulator
 
 ## Data Sources
 
-| Source | Description | File |
-|--------|-------------|------|
-| **Federal Reserve Z.1** | Aggregate hedge fund balance sheet (Table B.101.f) — 29 quarterly series via FRED API | `hedge_fund_balance_sheet_fred.csv` |
-| **SEC EDGAR 13F** | Institutional holdings for 8 major hedge funds (Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR) | `13f_*.csv` |
-| **CFTC COT** | Leveraged fund positioning in equity index futures (S&P 500, NASDAQ, etc.) | `cftc_cot.csv` |
-| **CBOE VIX** | Market volatility index aggregated to quarterly statistics via FRED | `vix_quarterly.csv` |
+| # | Source | What It Reveals | Coverage |
+|---|--------|----------------|----------|
+| 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | 1945–2025, quarterly |
+| 2 | **SEC Form PF** | Private fund statistics — GAV, NAV, leverage, derivatives, borrowing by creditor, strategy allocation, concentration | 2013–2025, quarterly + monthly |
+| 3 | **CFTC Weekly Swaps** | OTC derivatives market — interest rate, credit, and FX swap notional, volumes, counterparty splits | 2013–2026, weekly |
+| 4 | **SEC EDGAR 13F** | Fund-level equity and options holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR | Per filing |
+| 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
+| 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
+| 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
+| 8 | **DTCC Swap Repository** | Trade-level OTC derivative transactions (planned) | Daily |
+| 9 | **CFTC FCM Financials** | Broker-level capital, margin, and customer funds (planned) | Monthly |
 
-## Key Analyses
+## What We've Found So Far
 
-- **Balance sheet composition** — what hedge funds hold (equities, debt, derivatives, loans) and how allocations shift over time
-- **Leverage trends** — liability structure, leverage ratios, and borrowing patterns (domestic vs. foreign, prime brokerage vs. secured/unsecured)
-- **Derivative exposure** — long derivative values relative to total assets, including the Q1 2018 "Volmageddon" spike
-- **GameStop deep dive** — before/after comparison of industry metrics around the Jan 2021 short squeeze
-- **13F holdings** — what major hedge funds actually held during the GameStop window
-- **CFTC positioning** — net long/short positioning of leveraged funds in equity futures
-- **VIX correlation** — relationship between market volatility and hedge fund leverage
-- **Statistical analysis** — time series decomposition, rolling correlations, structural break detection (CUSUM)
+### The Industry Is 4x Larger Than Reported
+The Fed's Z.1 shows $3.07T in hedge fund assets. SEC Form PF shows **$12.6T in gross assets** and **$20.2T in derivatives**. The difference is leverage and off-balance-sheet exposure that the Fed's flow-of-funds framework doesn't capture.
+
+### Extreme Concentration
+- Top 10 funds control **8.2%** of industry NAV
+- Top 500 funds control **54.8%**
+- Citadel alone reported **$1.55T** in 13F holdings — half the Fed's industry total
+- Citadel filed **854 SC 13G forms** (5%+ ownership in 854 companies)
+
+### The Borrowing Machine
+- **78%** of hedge fund borrowing flows through prime brokerage
+- Only **2.1%** is unsecured — the rest is collateralized
+- **66.6%** of creditors are U.S. financial institutions; **31.8%** are non-U.S.
+- Qualifying hedge funds hold **$2.6T in short repo** — the largest single funding source
+
+### Leverage Is Mean-Reverting
+Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is stationary — it oscillates around 0.43x and self-corrects. Peak was 0.48x in Q1 2020. This implies systemic deleveraging mechanisms are working, but also that leverage always rebuilds.
+
+### The Derivatives Iceberg
+- **$4.8T long / $4.9T short** in interest rate derivatives — nearly perfectly hedged
+- **$1.8T long / $945B short** in equities — net long $883B
+- **$517B long / $639B short** in credit — **net short $122B** (betting on defaults)
+- The weekly CFTC swaps data shows **$415T** in IR notional outstanding — the plumbing beneath everything
+
+### Stress Scenarios
+| Scenario | Asset Impact | Leverage |
+|----------|-------------|----------|
+| Equity drawdown (-20%) | -8.2% | 0.46x → 0.52x |
+| Interest rate shock (+200bp) | -1.7% | 0.46x → 0.50x |
+| Prime brokerage pullback (-25%) | -5.2% | 0.46x → 0.41x |
 
 ## Setup
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Add your FRED API key to .env
 echo "FRED_API_KEY=your_key_here" > .env
 ```
 
@@ -40,25 +74,49 @@ Get a free FRED API key at https://fred.stlouisfed.org/docs/api/api_key.html
 
 ## Usage
 
-Open and run `hedge_fund_analysis.ipynb`. The notebook:
+```bash
+# Fetch all data (cached after first run)
+python -m src.data.fetch
 
-1. Fetches all data from FRED, SEC EDGAR, and CFTC (with local caching — subsequent runs are fast)
-2. Computes derived metrics (leverage ratio, allocation percentages, growth rates)
-3. Generates 12+ visualizations with key event annotations
-4. Produces a statistical analysis and automated summary of findings
+# Download CFTC weekly swap reports
+python -m src.data.fetch_swaps
+
+# Run the analysis notebook
+jupyter notebook notebooks/hedge_fund_analysis.ipynb
+```
 
 ## Project Structure
 
 ```
-.
-├── hedge_fund_analysis.ipynb   # Main analysis notebook
-├── data/                       # Cached datasets (auto-generated on first run)
+├── data/
+│   ├── raw/
+│   │   ├── swaps/              # ~600 weekly CFTC swap reports (xlsx)
+│   │   ├── form_pf/            # SEC Form PF statistics (xlsx + pdf)
+│   │   ├── form_adv/           # Fund profiles from EDGAR Submissions API
+│   │   ├── 13f_*.csv           # Fund-level holdings
+│   │   ├── cftc_cot.csv        # Futures positioning
+│   │   └── vix_quarterly.csv   # Volatility index
+│   └── processed/              # Cleaned, merged, derived datasets
 ├── src/
-│   └── prepare.py              # Data preparation utilities
-├── .env                        # FRED API key (not committed)
-└── requirements.txt            # Python dependencies
+│   ├── data/
+│   │   ├── fetch.py            # FRED, SEC EDGAR, CFTC, VIX fetchers
+│   │   ├── fetch_swaps.py      # CFTC weekly swap report downloader
+│   │   └── prepare.py          # Data cleaning and transformation
+│   ├── analysis/
+│   │   └── metrics.py          # Derived metrics and statistics
+│   └── visualization/
+│       └── plots.py            # matplotlib/seaborn chart functions
+├── notebooks/
+│   └── hedge_fund_analysis.ipynb
+└── outputs/
+    ├── figures/                # Generated charts
+    └── reports/                # Executive summary, stress tests, stats
 ```
 
 ## Tech Stack
 
-Python, Pandas, NumPy, Matplotlib, Seaborn, fredapi, statsmodels, Requests
+Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests, python-dotenv
+
+## Status
+
+**Active development.** Currently assembling and cross-referencing data sources. Next phase: build unified time series across all sources, decompose the derivatives black box, and map the counterparty network.

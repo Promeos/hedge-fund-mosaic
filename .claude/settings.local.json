@@ -2,12 +2,17 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:www.federalreserve.gov)",
+      "WebFetch(domain:www.sec.gov)",
+      "WebFetch(domain:www.cftc.gov)",
+      "WebFetch(domain:pddata.dtcc.com)",
       "Bash(python3:*)",
       "Bash(python3*)",
       "Bash(cd*)",
       "Bash(ls*)",
       "Bash(mkdir*)",
-      "Bash(pip*)"
+      "Bash(pip*)",
+      "Bash(curl*)",
+      "Bash(pip install:*)"
     ]
   }
 }

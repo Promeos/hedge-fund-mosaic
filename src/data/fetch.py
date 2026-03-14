@@ -54,8 +54,9 @@ HEDGE_FUND_SERIES = {
 }
 
 SEC_HEADERS = {
-    "User-Agent": "HedgeFundAnalysis research@example.com",
+    "User-Agent": "HedgeFundIndustryAnalysis admin@financialresearch.dev",
     "Accept-Encoding": "gzip, deflate",
+    "Host": "data.sec.gov",
 }
 
 HEDGE_FUND_CIKS = {
@@ -354,6 +355,121 @@ def fetch_cftc_data(cache_path=None):
 
 
 # ---------------------------------------------------------------------------
+# SEC EDGAR — Form ADV (Investment Adviser Registration)
+# ---------------------------------------------------------------------------
+
+def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
+    """Fetch Form ADV data from SEC EDGAR for a given fund.
+
+    Form ADV contains: AUM, employee count, types of clients,
+    fee structures, disciplinary history, and office locations.
+    """
+    cache_path = os.path.join(cache_dir, "form_adv", f"adv_{fund_name.replace(' ', '_').lower()}.json")
+    if os.path.exists(cache_path):
+        print(f"  Cached: {fund_name} ADV")
+        with open(cache_path) as f:
+            return json.load(f)
+
+    # Use the submissions API to find ADV filings
+    submissions_url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+    adv_headers = {
+        "User-Agent": SEC_HEADERS["User-Agent"],
+        "Accept-Encoding": "gzip, deflate",
+    }
+
+    try:
+        resp = requests.get(submissions_url, headers=adv_headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Extract company info
+        company_info = {
+            "name": data.get("name"),
+            "cik": cik,
+            "sic": data.get("sic"),
+            "sicDescription": data.get("sicDescription"),
+            "stateOfIncorporation": data.get("stateOfIncorporation"),
+            "addresses": data.get("addresses"),
+        }
+
+        # Find all filing types and dates
+        filings = data.get("filings", {}).get("recent", {})
+        forms = filings.get("form", [])
+        dates = filings.get("filingDate", [])
+        accessions = filings.get("accessionNumber", [])
+        primary_docs = filings.get("primaryDocument", [])
+
+        # Collect all filings (not just 13F)
+        filing_records = []
+        for i, form in enumerate(forms):
+            filing_records.append({
+                "form": form,
+                "filing_date": dates[i],
+                "accession": accessions[i],
+                "primary_doc": primary_docs[i] if i < len(primary_docs) else None,
+            })
+
+        # Summary by filing type
+        from collections import Counter
+        form_counts = Counter(forms)
+
+        result = {
+            "company_info": company_info,
+            "filing_type_counts": dict(form_counts),
+            "total_filings": len(filing_records),
+            "filing_date_range": {
+                "earliest": dates[-1] if dates else None,
+                "latest": dates[0] if dates else None,
+            },
+            "all_filings": filing_records,
+        }
+
+        # Look for ADV filings specifically
+        adv_filings = [f for f in filing_records if 'ADV' in f['form']]
+        result["adv_filings"] = adv_filings
+        result["adv_count"] = len(adv_filings)
+
+        # Try to get IAPD (Investment Adviser Public Disclosure) data
+        # CIK and IAPD numbers are different — IAPD uses SEC file numbers
+        iapd_numbers = []
+        for i, form in enumerate(forms):
+            if 'ADV' in form:
+                iapd_numbers.append(accessions[i])
+        result["iapd_accessions"] = iapd_numbers[:10]  # Keep recent ones
+
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, 'w') as f:
+            json.dump(result, f, indent=2)
+        print(f"  Saved {fund_name} ADV data ({len(filing_records)} total filings, {len(adv_filings)} ADV)")
+
+        return result
+
+    except Exception as e:
+        print(f"  Error fetching ADV for {fund_name}: {e}")
+        return {}
+
+
+def fetch_all_fund_profiles(cache_dir="data/raw"):
+    """Fetch submission profiles for all tracked hedge funds."""
+    print("Fetching fund profiles from SEC EDGAR Submissions API...")
+    profiles = {}
+    for fund_name, cik in HEDGE_FUND_CIKS.items():
+        profile = fetch_form_adv(cik, fund_name, cache_dir=cache_dir)
+        if profile:
+            profiles[fund_name] = profile
+            info = profile.get("company_info", {})
+            counts = profile.get("filing_type_counts", {})
+            adv_count = profile.get("adv_count", 0)
+            total = profile.get("total_filings", 0)
+            date_range = profile.get("filing_date_range", {})
+            print(f"    {fund_name}: {total} filings ({date_range.get('earliest')} to {date_range.get('latest')})")
+            print(f"      ADV: {adv_count}, 13F: {counts.get('13F-HR', 0)}, "
+                  f"SC 13G: {counts.get('SC 13G', 0) + counts.get('SC 13G/A', 0)}")
+        time.sleep(0.15)
+    return profiles
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -397,8 +513,12 @@ if __name__ == "__main__":
         print(f"Total 13F holdings: {len(df_13f)} records across {df_13f['fund'].nunique()} funds")
 
     # 4. CFTC
-    print("\n[4/4] CFTC — Commitments of Traders")
+    print("\n[4/5] CFTC — Commitments of Traders")
     fetch_cftc_data(cache_path=os.path.join(raw_dir, 'cftc_cot.csv'))
+
+    # 5. Fund profiles (Form ADV + submission history)
+    print("\n[5/5] SEC EDGAR — Fund Profiles (Submissions API)")
+    fetch_all_fund_profiles(cache_dir=raw_dir)
 
     print("\n" + "=" * 60)
     print("DONE")
