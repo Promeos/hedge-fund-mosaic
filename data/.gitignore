@@ -3,6 +3,8 @@ raw/*.csv
 raw/swaps/
 raw/form_pf/
 raw/form_adv/
+raw/dtcc/
+raw/fcm/
 processed/*.csv
 
 # IDE / OS

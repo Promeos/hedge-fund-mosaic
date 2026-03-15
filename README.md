@@ -27,8 +27,8 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 | 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
 | 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
 | 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
-| 8 | **DTCC Swap Repository** | Trade-level OTC derivative transactions (planned) | Daily |
-| 9 | **CFTC FCM Financials** | Broker-level capital, margin, and customer funds (planned) | Monthly |
+| 8 | **DTCC Swap Repository** | Trade-level OTC derivative transactions — 110 columns per trade including notional, counterparty type, clearing status, pricing | 2025–2026, daily |
+| 9 | **CFTC FCM Financials** | Broker-level adjusted net capital, excess capital, customer segregated funds, cleared swap segregation | 2022–2026, monthly |
 
 ## What We've Found So Far
 
@@ -78,8 +78,14 @@ Get a free FRED API key at https://fred.stlouisfed.org/docs/api/api_key.html
 # Fetch all data (cached after first run)
 python -m src.data.fetch
 
-# Download CFTC weekly swap reports
+# Download CFTC weekly swap reports (~600 files, 2013–2026)
 python -m src.data.fetch_swaps
+
+# Download DTCC trade-level swap data (~1,825 files, 2025–2026)
+python -m src.data.fetch_dtcc
+
+# Download CFTC FCM financial reports (49 files, 2022–2026)
+python -m src.data.fetch_fcm
 
 # Run the analysis notebook
 jupyter notebook notebooks/hedge_fund_analysis.ipynb
@@ -91,6 +97,8 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 ├── data/
 │   ├── raw/
 │   │   ├── swaps/              # ~600 weekly CFTC swap reports (xlsx)
+│   │   ├── dtcc/               # Daily DTCC cumulative swap reports (zip/csv)
+│   │   ├── fcm/                # Monthly FCM financial reports (xlsx)
 │   │   ├── form_pf/            # SEC Form PF statistics (xlsx + pdf)
 │   │   ├── form_adv/           # Fund profiles from EDGAR Submissions API
 │   │   ├── 13f_*.csv           # Fund-level holdings
@@ -101,6 +109,8 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   ├── data/
 │   │   ├── fetch.py            # FRED, SEC EDGAR, CFTC, VIX fetchers
 │   │   ├── fetch_swaps.py      # CFTC weekly swap report downloader
+│   │   ├── fetch_dtcc.py       # DTCC trade-level swap data downloader
+│   │   ├── fetch_fcm.py        # CFTC FCM financial report downloader
 │   │   └── prepare.py          # Data cleaning and transformation
 │   ├── analysis/
 │   │   └── metrics.py          # Derived metrics and statistics
@@ -120,3 +130,26 @@ Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests
 ## Status
 
 **Active development.** Currently assembling and cross-referencing data sources. Next phase: build unified time series across all sources, decompose the derivatives black box, and map the counterparty network.
+
+## License & Citation
+
+This project is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+**You must give appropriate credit if you use, remix, or build upon this work.** Derivatives must be shared under the same license.
+
+### How to cite
+
+```
+Ortiz, C. (2026). Hedge Fund X-Ray: Reconstructing the U.S. hedge fund industry
+from public regulatory data. https://github.com/Promeos/hedge-fund-xray
+```
+
+```bibtex
+@misc{ortiz2026hedgefundxray,
+  author = {Ortiz, Christopher},
+  title = {Hedge Fund X-Ray},
+  year = {2026},
+  publisher = {GitHub},
+  url = {https://github.com/Promeos/hedge-fund-xray}
+}
+```
