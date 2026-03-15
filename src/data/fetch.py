@@ -56,7 +56,6 @@ HEDGE_FUND_SERIES = {
 SEC_HEADERS = {
     "User-Agent": "HedgeFundIndustryAnalysis admin@financialresearch.dev",
     "Accept-Encoding": "gzip, deflate",
-    "Host": "data.sec.gov",
 }
 
 HEDGE_FUND_CIKS = {
@@ -156,10 +155,22 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
         start_date: Earliest filing date to fetch holdings for (inclusive).
         end_date: Latest filing date to fetch holdings for (inclusive).
     """
-    cache_path = os.path.join(cache_dir, f"13f_{fund_name.replace(' ', '_').lower()}.csv")
+    # Cache key includes date window so different queries don't collide
+    start_tag = start_date.replace('-', '')
+    end_tag = end_date.replace('-', '')
+    cache_path = os.path.join(
+        cache_dir,
+        f"13f_{fund_name.replace(' ', '_').lower()}_{start_tag}_{end_tag}.csv")
     if os.path.exists(cache_path):
-        print(f"  Cached: {fund_name}")
-        return pd.read_csv(cache_path)
+        df_cached = pd.read_csv(cache_path)
+        # Only use cache if it contains actual holdings data
+        if 'value_thousands' in df_cached.columns:
+            print(f"  Cached: {fund_name} ({len(df_cached)} holdings)")
+            return df_cached
+        else:
+            # Stale metadata-only cache — re-fetch
+            os.remove(cache_path)
+            print(f"  Stale cache removed for {fund_name}, re-fetching...")
 
     submissions_url = f"https://data.sec.gov/submissions/CIK{cik}.json"
 
@@ -294,7 +305,8 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
             print(f"  Saved {len(df_h)} holdings to {cache_path}")
             return df_h
         else:
-            df_filings.to_csv(cache_path, index=False)
+            # Do NOT cache metadata-only results — they poison future runs
+            print(f"  No holdings parsed for {fund_name} (XML extraction failed)")
             return df_filings
 
     except Exception as e:

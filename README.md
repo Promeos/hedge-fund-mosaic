@@ -13,7 +13,7 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 - **$12.6 trillion** in gross assets (Form PF) — 4x what the Fed reports
 - **$20.2 trillion** in derivative exposure — 3.7x their net asset value
 - **$415 trillion** in interest rate swap notional flowing through the system weekly
-- **119,606 individual holdings** across 8 of the largest funds on earth
+- **87,330 individual equity holdings** across 8 of the largest funds — deduped, amendment-resolved, per-quarter snapshots
 - The complete **borrowing, leverage, and counterparty structure** of an industry that answers to no single regulator
 
 ## Data Sources
@@ -23,7 +23,7 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 | 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | 1945–2025, quarterly |
 | 2 | **SEC Form PF** | Private fund statistics — GAV, NAV, leverage, derivatives, borrowing by creditor, strategy allocation, concentration | 2013–2025, quarterly + monthly |
 | 3 | **CFTC Weekly Swaps** | OTC derivatives market — interest rate, credit, and FX swap notional, volumes, counterparty splits | 2013–2026, weekly |
-| 4 | **SEC EDGAR 13F** | Fund-level equity and options holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR | Per filing |
+| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped, per-quarter snapshots | Per filing |
 | 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
 | 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
 | 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
@@ -59,7 +59,8 @@ Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is 
 ### Stress Scenarios
 | Scenario | Asset Impact | Leverage |
 |----------|-------------|----------|
-| Equity drawdown (-20%) | -8.2% | 0.46x → 0.52x |
+| Equity drawdown (-20%) | -8.2% | 0.46x → 0.56x |
+| COVID-style shock (Q1 2020, historical) | -8.5% | 0.46x → 0.48x |
 | Interest rate shock (+200bp) | -1.7% | 0.46x → 0.50x |
 | Prime brokerage pullback (-25%) | -5.2% | 0.46x → 0.41x |
 
@@ -82,7 +83,7 @@ Full test results saved to `outputs/reports/cross_source_tests.csv`.
 
 ## Visualizations
 
-16 publication-quality charts generated to `outputs/figures/`:
+20+ publication-quality charts generated to `outputs/figures/`:
 
 | Category | Charts |
 |----------|--------|
@@ -90,6 +91,8 @@ Full test results saved to `outputs/reports/cross_source_tests.csv`.
 | **Form PF** | GAV/NAV leverage, strategy allocation, concentration trends |
 | **CFTC Swaps** | Clearing rates, notional outstanding |
 | **FCM** | Capital & adequacy, market concentration |
+| **DTCC** | Notional by asset class, clearing rates |
+| **EDGAR** | Filing volume by fund |
 | **Cross-Source** | Z.1 vs Form PF leverage comparison |
 
 ## Setup
@@ -156,6 +159,7 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   │   └── prepare.py          # Data cleaning and transformation
 │   ├── analysis/
 │   │   ├── metrics.py          # Derived metrics and statistics
+│   │   ├── advanced.py         # Granger causality, VAR, Monte Carlo, structural breaks
 │   │   └── cross_source.py     # Cross-source alignment, reconciliation, 18 hypothesis tests
 │   └── visualization/
 │       └── plots.py            # 18 matplotlib/seaborn chart functions
@@ -172,7 +176,7 @@ Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests
 
 ## Processed Data
 
-30 CSVs produced in `data/processed/` from the raw data:
+31 CSVs produced in `data/processed/` from the raw data:
 
 | Source | Files | Key Outputs |
 |--------|-------|-------------|
@@ -184,7 +188,7 @@ Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests
 
 ## Status
 
-**Active development.** All 9 data sources acquired and parsed. Cross-source analysis pipeline operational with 18 hypothesis tests. Next: decompose the derivatives black box and map the counterparty network.
+**Active development.** All 9 data sources acquired, parsed, and demonstrated in a fully-executed notebook with cross-source reconciliation. 18 hypothesis tests operational. 13F holdings use amendment-deduped per-quarter snapshots. Next: decompose the derivatives black box and map the counterparty network.
 
 ## License & Citation
 
