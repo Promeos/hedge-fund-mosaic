@@ -111,8 +111,12 @@ def step_analyze():
         print("[1/2] Computing derived metrics")
         df = pd.read_csv(balance_sheet_path, index_col=0, parse_dates=True)
         df = compute_derived_metrics(df)
-        df.to_csv(os.path.join(PROCESSED_DIR, "hedge_fund_metrics.csv"))
-        print(f"  Saved {len(df)} quarters to data/processed/hedge_fund_metrics.csv")
+        canonical_path = os.path.join(PROCESSED_DIR, "hedge_fund_analysis.csv")
+        legacy_path = os.path.join(PROCESSED_DIR, "hedge_fund_metrics.csv")
+        df.to_csv(canonical_path)
+        df.to_csv(legacy_path)
+        print(f"  Saved {len(df)} quarters to data/processed/hedge_fund_analysis.csv")
+        print(f"  Saved compatibility copy to data/processed/hedge_fund_metrics.csv")
     else:
         print("[1/2] Skipped metrics — no balance sheet data found. Run --fetch first.")
 

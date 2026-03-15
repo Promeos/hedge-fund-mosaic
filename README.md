@@ -13,22 +13,22 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 - **$12.6 trillion** in gross assets (Form PF) — 4x what the Fed reports
 - **$20.2 trillion** in derivative exposure — 3.7x their net asset value
 - **$415 trillion** in interest rate swap notional flowing through the system weekly
-- **87,330 individual equity holdings** across 8 of the largest funds — deduped, amendment-resolved, per-quarter snapshots
+- **87,330 individual equity holdings** across 8 of the largest funds — deduped, amendment-resolved sample snapshots from **2020Q4–2021Q2**
 - The complete **borrowing, leverage, and counterparty structure** of an industry that answers to no single regulator
 
 ## Data Sources
 
 | # | Source | What It Reveals | Coverage |
 |---|--------|----------------|----------|
-| 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | 1945–2025, quarterly |
+| 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | Raw FRED series span 1945–2025; usable hedge fund observations begin 2012 Q4 |
 | 2 | **SEC Form PF** | Private fund statistics — GAV, NAV, leverage, derivatives, borrowing by creditor, strategy allocation, concentration | 2013–2025, quarterly + monthly |
 | 3 | **CFTC Weekly Swaps** | OTC derivatives market — interest rate, credit, and FX swap notional, volumes, counterparty splits | 2013–2026, weekly |
-| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped, per-quarter snapshots | Per filing |
+| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped sample snapshots | Bundled local sample: 2020Q4–2021Q2 |
 | 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
 | 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
 | 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
-| 8 | **DTCC Swap Repository** | Trade-level OTC derivative transactions — 110 columns per trade including notional, counterparty type, clearing status, pricing | 2025–2026, daily |
-| 9 | **CFTC FCM Financials** | Broker-level adjusted net capital, excess capital, customer segregated funds, cleared swap segregation | 2022–2026, monthly |
+| 8 | **DTCC Swap Repository** | Trade-level OTC derivative transactions — notional, counterparty type, clearing status, block-trade and prime-broker flags | Local snapshot: 2025-03-13 to 2026-03-13, daily |
+| 9 | **CFTC FCM Financials** | Broker-level adjusted net capital, excess capital, customer segregated funds, cleared swap segregation | Local snapshot: 2022-01 to 2026-01, monthly |
 
 ## What We've Found So Far
 
@@ -38,14 +38,14 @@ The Fed's Z.1 shows $3.07T in hedge fund assets. SEC Form PF shows **$12.6T in g
 ### Extreme Concentration
 - Top 10 funds control **8.2%** of industry NAV
 - Top 500 funds control **54.8%**
-- Citadel alone reported **$1.55T** in 13F holdings — half the Fed's industry total
+- In the bundled 13F sample, Citadel's largest filing is **$384.6B** (2021-02-16)
 - Citadel filed **854 SC 13G forms** (5%+ ownership in 854 companies)
 
 ### The Borrowing Machine
 - **78%** of hedge fund borrowing flows through prime brokerage
 - Only **2.1%** is unsecured — the rest is collateralized
-- **66.6%** of creditors are U.S. financial institutions; **31.8%** are non-U.S.
-- Qualifying hedge funds hold **$2.6T in short repo** — the largest single funding source
+- In **2025Q1**, **63.9%** of creditors are U.S. financial institutions and **35.3%** are non-U.S. financial institutions
+- In **2025-03**, qualifying hedge funds held **$2.8T** in reverse repo and **$2.6T** in prime-broker financing
 
 ### Leverage Is Mean-Reverting
 Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is stationary — it oscillates around 0.43x and self-corrects. Peak was 0.48x in Q1 2020. This implies systemic deleveraging mechanisms are working, but also that leverage always rebuilds.
@@ -56,30 +56,23 @@ Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is 
 - **$517B long / $639B short** in credit — **net short $122B** (betting on defaults)
 - The weekly CFTC swaps data shows **$415T** in IR notional outstanding — the plumbing beneath everything
 
-### Stress Scenarios
-| Scenario | Asset Impact | Leverage |
-|----------|-------------|----------|
-| Equity drawdown (-20%) | -8.2% | 0.46x → 0.56x |
-| COVID-style shock (Q1 2020, historical) | -8.5% | 0.46x → 0.48x |
-| Interest rate shock (+200bp) | -1.7% | 0.46x → 0.50x |
-| Prime brokerage pullback (-25%) | -5.2% | 0.46x → 0.41x |
-
 ### Cross-Source Statistical Tests
 
-We run 18 hypothesis tests across all 9 data sources. Key findings:
+The current suite emits **18 result rows**: 8 named cross-source tests plus 10 ADF/Mann-Kendall checks on key series. Key findings:
 
 | Test | Result | p-value | What It Means |
 |------|--------|---------|---------------|
-| **Liquidity mismatch vs VIX** | **PASS** | 0.005 | During market stress, investors can redeem faster than funds can liquidate — classic run risk |
+| **Liquidity gap vs VIX** | **PASS** | 0.005 | The 30-day investor-minus-portfolio liquidity gap moves higher in high-VIX quarters, but remains negative in the bundled sample |
 | **VIX → leverage (Granger)** | **PASS** | 0.014 | Volatility *causes* leverage changes — fear drives deleveraging |
-| **Z.1 leverage stationarity** | **PASS** | 0.026 | Industry leverage is mean-reverting around ~1.9x |
+| **Z.1 leverage stationarity** | **PASS** | 0.026 | Industry leverage is mean-reverting around ~0.43x liabilities / net assets |
 | **Form PF GAV trend** | **PASS** | 0.000 | Industry gross assets trending strongly upward |
 | **Form PF GAV/NAV trend** | **PASS** | 0.000 | Leverage ratio trending upward — funds are levering up |
 | **Z.1 ~ Form PF cointegration** | FAIL | 0.173 | The two measures of industry size move independently |
 | **Z.1/Form PF ratio stability** | FAIL | 0.944 | The gap between Fed and SEC views of the industry is *widening* |
+| **CFTC IR vs DTCC rates clearing** | FAIL | 0.993 | Rates clearing measures are not equivalent within a 10pp band in the local 2025Q1–2026Q1 overlap |
 | **Form PF → Z.1 leverage** | FAIL | 0.086 | Borderline — SEC data nearly predicts Fed data at 10% level |
 
-Full test results saved to `outputs/reports/cross_source_tests.csv`.
+The 13F/Form PF concentration comparison is currently **N/A** because the bundled 13F sample only spans 3 overlapping quarters. Full test results are saved to `outputs/reports/cross_source_tests.csv`.
 
 ## Visualizations
 
@@ -110,20 +103,20 @@ Get a free FRED API key at https://fred.stlouisfed.org/docs/api/api_key.html
 # Fetch all data (cached after first run)
 python -m src.data.fetch
 
-# Download CFTC weekly swap reports (~600 files, 2013–2026)
+# Download available CFTC weekly swap reports
 python -m src.data.fetch_swaps
 
-# Download DTCC trade-level swap data (~1,825 files, 2025–2026)
+# Download available DTCC trade-level swap data
 python -m src.data.fetch_dtcc
 
-# Download CFTC FCM financial reports (49 files, 2022–2026)
+# Download available CFTC FCM financial reports
 python -m src.data.fetch_fcm
 
 # Parse all data sources into processed CSVs
 python -m src.data.parse_form_pf    # 141 sheets → 19 CSVs
 python -m src.data.parse_fcm        # 49 files → 5 CSVs
-python -m src.data.parse_dtcc       # 1,310 ZIPs → 3 CSVs
-python -m src.data.parse_swaps      # 302 files → 3 CSVs
+python -m src.data.parse_dtcc       # available ZIPs → 2 CSVs + parse log
+python -m src.data.parse_swaps      # available files → 3 CSVs
 
 # Run cross-source analysis (alignment, reconciliation, 18 hypothesis tests)
 python -m src.analysis.cross_source
@@ -154,8 +147,8 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   │   ├── fetch_fcm.py        # CFTC FCM financial report downloader
 │   │   ├── parse_form_pf.py    # Form PF Excel parser (141 sheets → 19 CSVs)
 │   │   ├── parse_fcm.py        # FCM financial report parser (49 files → 5 CSVs)
-│   │   ├── parse_dtcc.py       # DTCC daily swap report parser (1,310 ZIPs → 3 CSVs)
-│   │   ├── parse_swaps.py      # CFTC weekly swap report parser (302 files → 3 CSVs)
+│   │   ├── parse_dtcc.py       # DTCC daily swap report parser (available ZIPs → 2 CSVs + log)
+│   │   ├── parse_swaps.py      # CFTC weekly swap report parser (available files → 3 CSVs)
 │   │   └── prepare.py          # Data cleaning and transformation
 │   ├── analysis/
 │   │   ├── metrics.py          # Derived metrics and statistics
@@ -176,19 +169,19 @@ Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests
 
 ## Processed Data
 
-31 CSVs produced in `data/processed/` from the raw data:
+Core processed outputs in `data/processed/`:
 
 | Source | Files | Key Outputs |
 |--------|-------|-------------|
 | Form PF | 19 | GAV/NAV, strategy allocation, concentration, leverage distribution, notional exposure, liquidity, fair value, geography, sector, borrowing, fund counts |
 | FCM | 5 | Monthly industry totals, quarterly aggregates, top brokers, concentration (HHI) |
-| DTCC | 3 | Daily summary, product breakdown, quarterly aggregates |
+| DTCC | 2 CSVs + log | Daily summary and quarterly quarter-end snapshots by asset class |
 | CFTC Swaps | 3 | Weekly time series, long format, quarterly aggregates |
-| Z.1 | 1 | Unified balance sheet with derived metrics |
+| Z.1 | 2 | Canonical analysis dataset plus compatibility copy |
 
 ## Status
 
-**Active development.** All 9 data sources acquired, parsed, and demonstrated in a fully-executed notebook with cross-source reconciliation. 18 hypothesis tests operational. 13F holdings use amendment-deduped per-quarter snapshots. Next: decompose the derivatives black box and map the counterparty network.
+**Active development.** All 9 data sources in the local bundle are acquired and parsed, and the cross-source analysis runs end-to-end from the current codebase. The bundled 13F sample is amendment-deduped but currently limited to **2020Q4–2021Q2**, so the 13F/Form PF concentration comparison is reported as N/A rather than overstated. Next: decompose the derivatives black box and map the counterparty network.
 
 ## License & Citation
 

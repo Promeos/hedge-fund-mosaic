@@ -10,7 +10,11 @@ from io import StringIO
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from fredapi import Fred
+
+try:
+    from fredapi import Fred
+except ImportError:  # pragma: no cover - exercised indirectly in test collection
+    Fred = None
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +504,10 @@ def fetch_all_fund_profiles(cache_dir="data/raw"):
 if __name__ == "__main__":
     load_dotenv()
     FRED_API_KEY = os.getenv("FRED_API_KEY")
+
+    if Fred is None:
+        print("ERROR: fredapi is not installed. Run `pip install -r requirements.txt`.")
+        exit(1)
 
     if not FRED_API_KEY:
         print("ERROR: FRED_API_KEY not found in .env")

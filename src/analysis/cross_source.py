@@ -95,6 +95,22 @@ def _quarter_str_to_timestamp(series):
     return pd.PeriodIndex(series, freq='Q').to_timestamp('Q')
 
 
+def _dtcc_rates_cleared_column(columns):
+    """Return the like-for-like DTCC rates cleared-notional column if present."""
+    preferred = 'dtcc_rates_cleared_notional_pct'
+    if preferred in columns:
+        return preferred
+    fallbacks = [
+        'dtcc_rates_cleared_pct',
+        'dtcc_cleared_notional_pct',
+        'dtcc_cleared_pct',
+    ]
+    for col in fallbacks:
+        if col in columns:
+            return col
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 2. Quarterly alignment
 # ---------------------------------------------------------------------------
@@ -220,15 +236,49 @@ def align_quarterly(sources):
     # --- DTCC (if available) ---
     if 'dtcc' in sources:
         dtcc = sources['dtcc'].copy()
-        dtcc = dtcc.dropna(subset=['date'])
+        dtcc = dtcc.dropna(subset=['date', 'asset_class']).copy()
+        dtcc = dtcc.sort_values(['date', 'asset_class'])
+        dtcc = dtcc.drop_duplicates(subset=['date', 'asset_class'], keep='last')
+        if (
+            'cleared_notional_pct' not in dtcc.columns and
+            {'cleared_notional_bn', 'total_notional_bn'}.issubset(dtcc.columns)
+        ):
+            dtcc['cleared_notional_pct'] = (
+                dtcc['cleared_notional_bn'] / dtcc['total_notional_bn']
+            )
+
         dtcc['quarter'] = dtcc['date'].dt.to_period('Q')
-        # Aggregate to quarterly means by asset class (flatten)
-        num_cols = dtcc.select_dtypes(include=[np.number]).columns.tolist()
-        dtcc_q = dtcc.groupby('quarter')[num_cols].mean()
-        dtcc_q.index = dtcc_q.index.to_timestamp('Q')
-        dtcc_q.index.name = 'date'
-        dtcc_q.columns = ['dtcc_' + c for c in dtcc_q.columns]
-        frames['dtcc'] = dtcc_q
+        dtcc_last = (
+            dtcc.groupby(['quarter', 'asset_class'], as_index=False)
+            .last()
+        )
+        dtcc_last['date'] = dtcc_last['quarter'].dt.to_timestamp('Q')
+        pivot_cols = [
+            'trade_count',
+            'total_notional_bn',
+            'usd_notional_bn',
+            'cleared_count',
+            'cleared_notional_bn',
+            'uncleared_notional_bn',
+            'cleared_pct',
+            'cleared_notional_pct',
+            'pb_pct',
+            'block_pct',
+        ]
+        available = [c for c in pivot_cols if c in dtcc_last.columns]
+        dtcc_frames = []
+        for col in available:
+            pivot = dtcc_last.pivot(index='date', columns='asset_class', values=col)
+            pivot.columns = [
+                f"dtcc_{str(asset).lower()}_{col}" for asset in pivot.columns
+            ]
+            dtcc_frames.append(pivot)
+        if dtcc_frames:
+            dtcc_aligned = dtcc_frames[0]
+            for frame in dtcc_frames[1:]:
+                dtcc_aligned = dtcc_aligned.join(frame, how='outer')
+            dtcc_aligned.index.name = 'date'
+            frames['dtcc'] = dtcc_aligned
 
     if not frames:
         raise ValueError("No data sources could be loaded or aligned.")
@@ -317,22 +367,12 @@ def reconcile_cftc_dtcc(aligned):
     """Compare CFTC and DTCC cleared percentages if both are available."""
     result = {'source': 'CFTC vs DTCC'}
 
-    # Check for DTCC cleared_pct columns
-    dtcc_cleared_col = None
-    for col in aligned.columns:
-        if 'dtcc' in col and 'cleared_pct' in col:
-            dtcc_cleared_col = col
-            break
-
-    cftc_col = None
-    for col in aligned.columns:
-        if col.startswith('swap_ir_cleared_pct'):
-            cftc_col = col
-            break
+    dtcc_cleared_col = _dtcc_rates_cleared_column(aligned.columns)
+    cftc_col = 'swap_ir_cleared_pct' if 'swap_ir_cleared_pct' in aligned.columns else None
 
     if dtcc_cleared_col is None or cftc_col is None:
-        result['error'] = ('Insufficient data: need both DTCC cleared_pct '
-                           'and swap IR cleared_pct columns')
+        result['error'] = ('Insufficient data: need DTCC rates cleared-notional '
+                           'and CFTC IR cleared percentage columns')
         return result
 
     overlap = aligned[[cftc_col, dtcc_cleared_col]].dropna()
@@ -377,11 +417,7 @@ def compute_cross_metrics(aligned):
         )
 
     # Clearing consistency: DTCC cleared % vs swap IR cleared %
-    dtcc_cleared_col = None
-    for col in df.columns:
-        if 'dtcc' in col and 'cleared_pct' in col:
-            dtcc_cleared_col = col
-            break
+    dtcc_cleared_col = _dtcc_rates_cleared_column(df.columns)
     if dtcc_cleared_col and 'swap_ir_cleared_pct' in df.columns:
         df['clearing_consistency'] = (
             df[dtcc_cleared_col] - df['swap_ir_cleared_pct']
@@ -522,11 +558,7 @@ def test_h3_cleared_pct_equivalence(aligned):
     test_id = 'H3'
     desc = 'Equivalence: CFTC vs DTCC cleared % (10pp margin)'
     try:
-        dtcc_col = None
-        for col in aligned.columns:
-            if 'dtcc' in col and 'cleared_pct' in col:
-                dtcc_col = col
-                break
+        dtcc_col = _dtcc_rates_cleared_column(aligned.columns)
         swap_col = 'swap_ir_cleared_pct'
         if dtcc_col is None or swap_col not in aligned.columns:
             return _make_result(test_id, desc,
@@ -731,7 +763,7 @@ def test_h6_liquidity_vix(sources):
 
         t_stat, p_val = stats.ttest_ind(high_mismatch, low_mismatch,
                                          equal_var=False)
-        interp = (f'Mismatch worsens in high-VIX quarters '
+        interp = (f'30-day liquidity gap is higher in high-VIX quarters '
                   f'(high={high_mismatch.mean():.3f}, low={low_mismatch.mean():.3f})'
                   if p_val < 0.05
                   else f'No significant difference '
@@ -776,16 +808,31 @@ def test_h7_concentration_correlation(sources):
 
         # If 13F data exists, compute HHI per quarter from holdings
         holdings = pd.read_csv(thirteenf_path)
-        if 'value' not in holdings.columns or 'quarter' not in holdings.columns:
+        if 'value' in holdings.columns:
+            holdings['holding_value'] = holdings['value']
+        elif 'value_thousands' in holdings.columns:
+            holdings['holding_value'] = holdings['value_thousands'] * 1000
+        else:
             return _make_result(test_id, desc,
-                                interpretation='13F holdings file lacks required columns')
+                                interpretation='13F holdings file lacks value columns')
+
+        if 'quarter' not in holdings.columns:
+            if 'report_period' in holdings.columns:
+                holdings['quarter'] = holdings['report_period']
+            elif 'filing_date' in holdings.columns:
+                holdings['quarter'] = pd.to_datetime(
+                    holdings['filing_date']
+                ).dt.to_period('Q').astype(str)
+            else:
+                return _make_result(test_id, desc,
+                                    interpretation='13F holdings file lacks quarter columns')
 
         # HHI by quarter from 13F
         hhi_13f = []
         for q, grp in holdings.groupby('quarter'):
-            total = grp['value'].sum()
+            total = grp['holding_value'].sum()
             if total > 0:
-                shares = grp['value'] / total
+                shares = grp['holding_value'] / total
                 hhi = (shares ** 2).sum()
                 hhi_13f.append({'quarter': q, 'hhi_13f': hhi})
 

@@ -538,7 +538,8 @@ def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
         Expected columns: date, plus some of ir_cleared_pct, credit_cleared_pct,
         fx_cleared_pct.
     dtcc_df : DataFrame, optional
-        dtcc_daily_summary.csv with date and rates_cleared_pct columns.
+        DTCC daily summary with either rates_cleared_pct or
+        asset_class='RATES' plus cleared_notional_pct.
     save_path : str, optional
         Path to save the figure.
     """
@@ -570,6 +571,16 @@ def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
         ax.scatter(dtcc['date'], dtcc['rates_cleared_pct'] * 100, s=15,
                    color=COLORS['teal'], alpha=0.5, label='DTCC Rates Cleared %',
                    zorder=5)
+    elif (
+        dtcc_df is not None and
+        {'asset_class', 'cleared_notional_pct', 'date'}.issubset(dtcc_df.columns)
+    ):
+        dtcc = dtcc_df.copy()
+        dtcc = dtcc[dtcc['asset_class'].astype(str).str.upper() == 'RATES']
+        dtcc['date'] = pd.to_datetime(dtcc['date'])
+        ax.scatter(dtcc['date'], dtcc['cleared_notional_pct'] * 100, s=15,
+                   color=COLORS['teal'], alpha=0.5,
+                   label='DTCC Rates Cleared Notional %', zorder=5)
 
     ax.set_ylabel('Cleared (%)')
     ax.set_title('OTC Derivatives — Clearing Rates')

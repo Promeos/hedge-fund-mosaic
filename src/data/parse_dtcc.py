@@ -162,8 +162,28 @@ SUMMARY_FIELDS = [
     'date', 'asset_class', 'trade_count',
     'total_notional_bn', 'usd_notional_bn',
     'cleared_count', 'cleared_notional_bn', 'uncleared_notional_bn',
-    'cleared_pct', 'pb_count', 'pb_pct', 'block_count', 'block_pct',
+    'cleared_pct', 'cleared_notional_pct',
+    'pb_count', 'pb_pct', 'block_count', 'block_pct',
 ]
+
+
+def _clean_existing_summary(summary_path):
+    """Deduplicate resume state by (date, asset_class) and backfill derived columns."""
+    if not os.path.exists(summary_path):
+        return pd.DataFrame(columns=SUMMARY_FIELDS + ['cleared_notional_pct'])
+
+    daily = pd.read_csv(summary_path)
+    if daily.empty:
+        return daily
+
+    daily = daily.sort_values(['date', 'asset_class'])
+    daily = daily.drop_duplicates(subset=['date', 'asset_class'], keep='last')
+    if 'cleared_notional_pct' not in daily.columns:
+        daily['cleared_notional_pct'] = (
+            daily['cleared_notional_bn'] / daily['total_notional_bn']
+        )
+    daily.to_csv(summary_path, index=False)
+    return daily
 
 
 def _validate_row(summary):
@@ -197,13 +217,12 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
     summary_path = os.path.join(output_dir, 'dtcc_daily_summary.csv')
     error_path = os.path.join(output_dir, 'dtcc_parse_errors.log')
 
-    # Resume support: skip already-parsed dates (use csv module, not pandas)
+    # Resume support: normalize any pre-existing file before appending.
     existing_keys = set()
-    if os.path.exists(summary_path):
-        with open(summary_path, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                existing_keys.add((str(row['date'])[:10], row['asset_class']))
+    existing = _clean_existing_summary(summary_path)
+    if not existing.empty:
+        for _, row in existing.iterrows():
+            existing_keys.add((str(row['date'])[:10], row['asset_class']))
         print(f"  Resuming: {len(existing_keys)} rows already saved", flush=True)
 
     write_header = len(existing_keys) == 0
@@ -241,6 +260,10 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
 
             # Stream write — one row at a time, no memory accumulation
             summary['date'] = summary['date'].strftime('%Y-%m-%d')
+            summary['cleared_notional_pct'] = (
+                summary['cleared_notional_bn'] / summary['total_notional_bn']
+                if summary['total_notional_bn'] > 0 else 0
+            )
             writer.writerow(summary)
             csvfile.flush()
             parsed += 1
@@ -260,20 +283,35 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
     # --- Quarterly aggregation (lightweight read of the flat CSV) ---
     daily = pd.read_csv(summary_path)
     daily = daily.sort_values(['date', 'asset_class'])
+    daily = daily.drop_duplicates(subset=['date', 'asset_class'], keep='last')
+    if 'cleared_notional_pct' not in daily.columns:
+        daily['cleared_notional_pct'] = daily['cleared_notional_bn'] / daily['total_notional_bn']
     daily.to_csv(summary_path, index=False)
 
     daily['date'] = pd.to_datetime(daily['date'])
     daily['quarter'] = daily['date'].dt.to_period('Q').astype(str)
-    quarterly = daily.groupby(['quarter', 'asset_class']).agg(
-        trading_days=('date', 'count'),
-        total_trades=('trade_count', 'sum'),
-        avg_daily_trades=('trade_count', 'mean'),
-        total_notional_bn=('total_notional_bn', 'sum'),
-        avg_daily_notional_bn=('total_notional_bn', 'mean'),
-        avg_cleared_pct=('cleared_pct', 'mean'),
-        avg_pb_pct=('pb_pct', 'mean'),
-        avg_block_pct=('block_pct', 'mean'),
+    quarter_end = (
+        daily.sort_values(['asset_class', 'date'])
+        .groupby(['quarter', 'asset_class'], as_index=False)
+        .last()
+        .rename(columns={
+            'date': 'quarter_end_date',
+            'trade_count': 'quarter_end_trade_count',
+            'total_notional_bn': 'quarter_end_total_notional_bn',
+            'usd_notional_bn': 'quarter_end_usd_notional_bn',
+            'cleared_count': 'quarter_end_cleared_count',
+            'cleared_notional_bn': 'quarter_end_cleared_notional_bn',
+            'uncleared_notional_bn': 'quarter_end_uncleared_notional_bn',
+            'cleared_pct': 'quarter_end_cleared_pct',
+            'cleared_notional_pct': 'quarter_end_cleared_notional_pct',
+            'pb_pct': 'quarter_end_pb_pct',
+            'block_pct': 'quarter_end_block_pct',
+        })
+    )
+    trading_days = daily.groupby(['quarter', 'asset_class']).agg(
+        trading_days=('date', 'nunique')
     ).reset_index()
+    quarterly = trading_days.merge(quarter_end, on=['quarter', 'asset_class'], how='left')
     quarterly.to_csv(os.path.join(output_dir, 'dtcc_quarterly.csv'), index=False)
     print(f"  Saved dtcc_quarterly.csv ({len(quarterly)} rows)", flush=True)
 
@@ -285,7 +323,8 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
     for ac in daily['asset_class'].unique():
         ac_data = daily[daily['asset_class'] == ac]
         print(f"  {ac}: {len(ac_data)} days, {ac_data['trade_count'].sum():,.0f} total trades, "
-              f"avg cleared {ac_data['cleared_pct'].mean():.1%}", flush=True)
+              f"quarter-end cleared notional {ac_data['cleared_notional_pct'].iloc[-1]:.1%}",
+              flush=True)
 
 
 if __name__ == '__main__':
