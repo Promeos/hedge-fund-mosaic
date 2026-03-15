@@ -273,3 +273,492 @@ def plot_correlation_heatmap(df, cols=None, save_path=None):
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
+
+
+# ---------------------------------------------------------------------------
+# Form PF, FCM, DTCC, and CFTC Swaps chart functions
+# ---------------------------------------------------------------------------
+
+def _parse_quarter(series):
+    """Convert quarter strings like '2013Q1' to end-of-quarter timestamps."""
+    return pd.PeriodIndex(series, freq='Q').to_timestamp('Q')
+
+
+def plot_form_pf_leverage(df, z1_df=None, save_path=None):
+    """Form PF hedge fund leverage — GAV, NAV, and GAV/NAV ratio.
+
+    Parameters
+    ----------
+    df : DataFrame
+        form_pf_gav_nav.csv filtered to fund_type == 'Hedge Fund'.
+        Expected columns: quarter, gav, nav.
+    z1_df : DataFrame, optional
+        hedge_fund_analysis.csv with leverage_ratio and a datetime index.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    required = {'quarter', 'gav', 'nav'}
+    if not required.issubset(df.columns):
+        print(f"plot_form_pf_leverage: missing columns {required - set(df.columns)}")
+        return
+
+    data = df.copy()
+    data['date'] = _parse_quarter(data['quarter'])
+    data = data.sort_values('date')
+    data['gav_nav_ratio'] = data['gav'] / data['nav'].replace(0, np.nan)
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    ax1.plot(data['date'], data['gav'], linewidth=2.5, color=COLORS['blue'],
+             label='GAV ($B)')
+    ax1.plot(data['date'], data['nav'], linewidth=2.5, color=COLORS['green'],
+             label='NAV ($B)')
+    ax1.set_ylabel('$B')
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(data['date'], data['gav_nav_ratio'], linewidth=2, color=COLORS['red'],
+             label='GAV / NAV')
+    ax2.set_ylabel('GAV / NAV Ratio', color=COLORS['red'])
+
+    if z1_df is not None and 'leverage_ratio' in z1_df.columns:
+        ax2.plot(z1_df.index, z1_df['leverage_ratio'], linewidth=1.5,
+                 color=COLORS['dark_red'], linestyle='--', label='Z.1 Leverage Ratio')
+
+    ax2.legend(loc='upper right')
+    add_event_annotations(ax1)
+    ax1.set_title('Form PF — Hedge Fund Leverage (GAV/NAV)')
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_strategy_allocation(df, save_path=None):
+    """Stacked area chart of hedge fund NAV by strategy over time.
+
+    Parameters
+    ----------
+    df : DataFrame
+        form_pf_strategy.csv.
+        Expected columns: quarter, strategy, nav.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    required = {'quarter', 'strategy', 'nav'}
+    if not required.issubset(df.columns):
+        print(f"plot_strategy_allocation: missing columns {required - set(df.columns)}")
+        return
+
+    data = df.copy()
+    data['date'] = _parse_quarter(data['quarter'])
+    pivot = data.pivot_table(index='date', columns='strategy', values='nav',
+                             aggfunc='sum').fillna(0).sort_index()
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.stackplot(pivot.index, *[pivot[c] for c in pivot.columns],
+                 labels=pivot.columns, alpha=0.8)
+    ax.set_title('Form PF — Hedge Fund Strategy Allocation (NAV)')
+    ax.set_ylabel('NAV ($B)')
+    ax.legend(loc='upper left', fontsize=9, ncol=2)
+    add_event_annotations(ax)
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_notional_exposure(df, save_path=None):
+    """Grouped bar chart of notional exposure by investment type.
+
+    Parameters
+    ----------
+    df : DataFrame
+        form_pf_notional.csv.
+        Expected columns: quarter, investment_type, long_notional, short_notional.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    required = {'quarter', 'investment_type', 'long_notional'}
+    if not required.issubset(df.columns):
+        print(f"plot_notional_exposure: missing columns {required - set(df.columns)}")
+        return
+
+    data = df.copy()
+    latest_q = data['quarter'].max()
+    latest = data[data['quarter'] == latest_q].copy()
+
+    top = latest.nlargest(10, 'long_notional')
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+    x = np.arange(len(top))
+    width = 0.35
+
+    ax.bar(x - width / 2, top['long_notional'], width, label='Long Notional',
+           color=COLORS['blue'], alpha=0.85)
+    if 'short_notional' in top.columns:
+        ax.bar(x + width / 2, -top['short_notional'].abs(), width,
+               label='Short Notional', color=COLORS['red'], alpha=0.85)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(top['investment_type'], rotation=45, ha='right', fontsize=10)
+    ax.axhline(0, color='gray', linewidth=0.5)
+    ax.set_ylabel('Notional ($B)')
+    ax.set_title(f'Form PF — Notional Exposure by Investment Type ({latest_q})')
+    ax.legend()
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_concentration_trend(df, save_path=None):
+    """Multi-line chart of hedge fund concentration (Top 10/25/50 NAV share).
+
+    Parameters
+    ----------
+    df : DataFrame
+        form_pf_concentration.csv.
+        Expected columns: quarter, plus some of top_10_nav_share,
+        top_25_nav_share, top_50_nav_share.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    if 'quarter' not in df.columns:
+        print("plot_concentration_trend: missing 'quarter' column")
+        return
+
+    # Handle pivoted format (top_10_nav_share columns) or long format (top_n + nav_share)
+    if 'top_n' in df.columns and 'nav_share' in df.columns:
+        # Long format: pivot to get one line per top_n
+        data = df.copy()
+        data['date'] = _parse_quarter(data['quarter'])
+        data = data.sort_values('date')
+        top_n_colors = {
+            'Top 10': COLORS['red'],
+            'Top 25': COLORS['orange'],
+            'Top 50': COLORS['blue'],
+        }
+        fig, ax = plt.subplots(figsize=(14, 6))
+        for tn, color in top_n_colors.items():
+            subset = data[data['top_n'] == tn]
+            if not subset.empty:
+                ax.plot(subset['date'], subset['nav_share'] * 100, linewidth=2,
+                        label=tn, color=color)
+    else:
+        share_cols = {
+            'top_10_nav_share': ('Top 10', COLORS['red']),
+            'top_25_nav_share': ('Top 25', COLORS['orange']),
+            'top_50_nav_share': ('Top 50', COLORS['blue']),
+        }
+        available = {k: v for k, v in share_cols.items() if k in df.columns}
+        if not available:
+            print("plot_concentration_trend: no share columns found")
+            return
+
+        data = df.copy()
+        data['date'] = _parse_quarter(data['quarter'])
+        data = data.sort_values('date')
+
+        fig, ax = plt.subplots(figsize=(14, 6))
+        for col, (label, color) in available.items():
+            ax.plot(data['date'], data[col] * 100, linewidth=2, label=label, color=color)
+
+    ax.set_ylabel('NAV Share (%)')
+    ax.set_title('Form PF — Fund Concentration Trends')
+    ax.legend()
+    add_event_annotations(ax)
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_liquidity_mismatch(df, save_path=None):
+    """Liquidity at 30 days by type — investor, portfolio, financing.
+
+    Parameters
+    ----------
+    df : DataFrame
+        form_pf_liquidity.csv.
+        Expected columns: quarter, liquidity_type, period, cumulative_pct.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    required = {'quarter', 'liquidity_type', 'period', 'cumulative_pct'}
+    if not required.issubset(df.columns):
+        print(f"plot_liquidity_mismatch: missing columns {required - set(df.columns)}")
+        return
+
+    data = df.copy()
+    data['date'] = _parse_quarter(data['quarter'])
+
+    # Filter to the 30-day period
+    mask = data['period'].str.contains('30', na=False)
+    data_30 = data[mask].copy()
+    if data_30.empty:
+        print("plot_liquidity_mismatch: no '30 days' period found")
+        return
+
+    liq_types = data_30['liquidity_type'].unique()
+    n_panels = len(liq_types)
+    if n_panels == 0:
+        return
+
+    fig, axes = plt.subplots(1, min(n_panels, 3), figsize=(6 * min(n_panels, 3), 5),
+                             squeeze=False)
+    axes = axes.flatten()
+
+    type_colors = {
+        'investor_liquidity': COLORS['blue'],
+        'portfolio_liquidity': COLORS['green'],
+        'financing_liquidity': COLORS['orange'],
+    }
+
+    for i, ltype in enumerate(liq_types[:3]):
+        ax = axes[i]
+        subset = data_30[data_30['liquidity_type'] == ltype].sort_values('date')
+        color = type_colors.get(ltype, COLORS['dark'])
+        ax.plot(subset['date'], subset['cumulative_pct'] * 100, linewidth=2, color=color)
+        ax.fill_between(subset['date'], subset['cumulative_pct'] * 100, alpha=0.15,
+                        color=color)
+        ax.set_title(ltype.replace('_', ' ').title(), fontsize=11)
+        ax.set_ylabel('Cumulative % at 30 Days')
+        add_event_annotations(ax)
+
+    fig.suptitle('Form PF — Liquidity at 30 Days by Type', fontsize=14, y=1.02)
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
+    """OTC derivatives clearing rates over time.
+
+    Parameters
+    ----------
+    swaps_df : DataFrame
+        swaps_weekly.csv.
+        Expected columns: date, plus some of ir_cleared_pct, credit_cleared_pct,
+        fx_cleared_pct.
+    dtcc_df : DataFrame, optional
+        dtcc_daily_summary.csv with date and rates_cleared_pct columns.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    if 'date' not in swaps_df.columns:
+        print("plot_clearing_rate: missing 'date' column in swaps_df")
+        return
+
+    data = swaps_df.copy()
+    data['date'] = pd.to_datetime(data['date'])
+    data = data.sort_values('date')
+
+    clearing_cols = {
+        'ir_cleared_pct': ('Interest Rate', COLORS['blue']),
+        'credit_cleared_pct': ('Credit', COLORS['red']),
+        'fx_cleared_pct': ('FX', COLORS['green']),
+    }
+    available = {k: v for k, v in clearing_cols.items() if k in data.columns}
+    if not available:
+        print("plot_clearing_rate: no clearing percentage columns found")
+        return
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    for col, (label, color) in available.items():
+        ax.plot(data['date'], data[col] * 100, linewidth=2, label=label, color=color)
+
+    if dtcc_df is not None and 'rates_cleared_pct' in dtcc_df.columns:
+        dtcc = dtcc_df.copy()
+        dtcc['date'] = pd.to_datetime(dtcc['date'])
+        ax.scatter(dtcc['date'], dtcc['rates_cleared_pct'] * 100, s=15,
+                   color=COLORS['teal'], alpha=0.5, label='DTCC Rates Cleared %',
+                   zorder=5)
+
+    ax.set_ylabel('Cleared (%)')
+    ax.set_title('OTC Derivatives — Clearing Rates')
+    ax.legend()
+    add_event_annotations(ax)
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_fcm_capital(df, save_path=None):
+    """FCM industry capital and adequacy ratio.
+
+    Parameters
+    ----------
+    df : DataFrame
+        fcm_monthly_industry.csv.
+        Expected columns: date, adj_net_capital, excess_net_capital,
+        capital_adequacy_ratio.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    # Accept either 'date' or 'as_of_date'
+    data = df.copy()
+    if 'as_of_date' in data.columns and 'date' not in data.columns:
+        data['date'] = data['as_of_date']
+    required = {'date', 'adj_net_capital', 'excess_net_capital', 'capital_adequacy_ratio'}
+    if not required.issubset(data.columns):
+        print(f"plot_fcm_capital: missing columns {required - set(data.columns)}")
+        return
+
+    data['date'] = pd.to_datetime(data['date'])
+    data = data.sort_values('date')
+
+    # Convert raw USD to billions
+    data['adj_net_capital_b'] = data['adj_net_capital'] / 1e9
+    data['excess_net_capital_b'] = data['excess_net_capital'] / 1e9
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    ax1.plot(data['date'], data['adj_net_capital_b'], linewidth=2.5,
+             color=COLORS['blue'], label='Adj Net Capital ($B)')
+    ax1.plot(data['date'], data['excess_net_capital_b'], linewidth=2.5,
+             color=COLORS['green'], label='Excess Net Capital ($B)')
+    ax1.set_ylabel('$B')
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(data['date'], data['capital_adequacy_ratio'], linewidth=2,
+             color=COLORS['orange'], linestyle='--', label='Capital Adequacy Ratio')
+    ax2.set_ylabel('Capital Adequacy Ratio', color=COLORS['orange'])
+    ax2.legend(loc='upper right')
+
+    add_event_annotations(ax1)
+    ax1.set_title('FCM Industry — Capital & Adequacy')
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_fcm_concentration(df, save_path=None):
+    """FCM market concentration — HHI and top-5 share.
+
+    Parameters
+    ----------
+    df : DataFrame
+        fcm_concentration.csv.
+        Expected columns: date, hhi, top5_share.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    # Accept either 'date' or 'as_of_date'
+    data = df.copy()
+    if 'as_of_date' in data.columns and 'date' not in data.columns:
+        data['date'] = data['as_of_date']
+    required = {'date', 'hhi', 'top5_share'}
+    if not required.issubset(data.columns):
+        print(f"plot_fcm_concentration: missing columns {required - set(data.columns)}")
+        return
+
+    data['date'] = pd.to_datetime(data['date'])
+    data = data.sort_values('date')
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    ax1.plot(data['date'], data['hhi'], linewidth=2.5, color=COLORS['purple'],
+             label='HHI')
+    ax1.set_ylabel('HHI', color=COLORS['purple'])
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(data['date'], data['top5_share'] * 100, linewidth=2,
+             color=COLORS['teal'], label='Top 5 Share (%)')
+    ax2.set_ylabel('Top 5 Share (%)', color=COLORS['teal'])
+    ax2.legend(loc='upper right')
+
+    add_event_annotations(ax1)
+    ax1.set_title('FCM Industry — Market Concentration')
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
+    """Cross-source leverage comparison — Z.1 vs Form PF.
+
+    Parameters
+    ----------
+    z1_df : DataFrame
+        hedge_fund_analysis.csv with leverage_ratio and a datetime index.
+    pf_df : DataFrame
+        form_pf_gav_nav.csv filtered to fund_type == 'Hedge Fund'.
+        Expected columns: quarter, gav, nav.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    if 'leverage_ratio' not in z1_df.columns:
+        print("plot_cross_source_leverage: missing 'leverage_ratio' in z1_df")
+        return
+    if not {'quarter', 'gav', 'nav'}.issubset(pf_df.columns):
+        print("plot_cross_source_leverage: missing columns in pf_df")
+        return
+
+    pf = pf_df.copy()
+    pf['date'] = _parse_quarter(pf['quarter'])
+    pf = pf.sort_values('date')
+    pf['gav_nav_ratio'] = pf['gav'] / pf['nav'].replace(0, np.nan)
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    ax1.plot(z1_df.index, z1_df['leverage_ratio'], linewidth=2.5,
+             color=COLORS['blue'], label='Z.1 Leverage Ratio')
+    ax1.set_ylabel('Z.1 Leverage Ratio', color=COLORS['blue'])
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(pf['date'], pf['gav_nav_ratio'], linewidth=2.5,
+             color=COLORS['red'], label='Form PF GAV/NAV')
+    ax2.set_ylabel('Form PF GAV / NAV', color=COLORS['red'])
+    ax2.legend(loc='upper right')
+
+    add_event_annotations(ax1)
+    ax1.set_title('Cross-Source Leverage Comparison — Z.1 vs Form PF')
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def plot_swaps_notional(df, save_path=None):
+    """Stacked area chart of OTC swap notional outstanding by asset class.
+
+    Parameters
+    ----------
+    df : DataFrame
+        swaps_weekly.csv.
+        Expected columns: date, plus some of ir_notional, credit_notional,
+        fx_notional.
+    save_path : str, optional
+        Path to save the figure.
+    """
+    if 'date' not in df.columns:
+        print("plot_swaps_notional: missing 'date' column")
+        return
+
+    data = df.copy()
+    data['date'] = pd.to_datetime(data['date'])
+    data = data.sort_values('date')
+
+    notional_cols = {
+        'ir_total': ('Interest Rate', COLORS['blue']),
+        'credit_total': ('Credit', COLORS['red']),
+        'fx_total': ('FX', COLORS['green']),
+    }
+    available = {k: v for k, v in notional_cols.items() if k in data.columns}
+    if not available:
+        print("plot_swaps_notional: no notional columns found")
+        return
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    cols = list(available.keys())
+    labels = [available[c][0] for c in cols]
+    colors = [available[c][1] for c in cols]
+
+    ax.stackplot(data['date'], *[data[c].fillna(0) for c in cols],
+                 labels=labels, colors=colors, alpha=0.8)
+    ax.set_ylabel('Notional Outstanding ($B)')
+    ax.set_title('OTC Swap Notional Outstanding by Asset Class')
+    ax.legend(loc='upper left')
+    add_event_annotations(ax)
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()

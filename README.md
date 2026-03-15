@@ -63,6 +63,35 @@ Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is 
 | Interest rate shock (+200bp) | -1.7% | 0.46x → 0.50x |
 | Prime brokerage pullback (-25%) | -5.2% | 0.46x → 0.41x |
 
+### Cross-Source Statistical Tests
+
+We run 18 hypothesis tests across all 9 data sources. Key findings:
+
+| Test | Result | p-value | What It Means |
+|------|--------|---------|---------------|
+| **Liquidity mismatch vs VIX** | **PASS** | 0.005 | During market stress, investors can redeem faster than funds can liquidate — classic run risk |
+| **VIX → leverage (Granger)** | **PASS** | 0.014 | Volatility *causes* leverage changes — fear drives deleveraging |
+| **Z.1 leverage stationarity** | **PASS** | 0.026 | Industry leverage is mean-reverting around ~1.9x |
+| **Form PF GAV trend** | **PASS** | 0.000 | Industry gross assets trending strongly upward |
+| **Form PF GAV/NAV trend** | **PASS** | 0.000 | Leverage ratio trending upward — funds are levering up |
+| **Z.1 ~ Form PF cointegration** | FAIL | 0.173 | The two measures of industry size move independently |
+| **Z.1/Form PF ratio stability** | FAIL | 0.944 | The gap between Fed and SEC views of the industry is *widening* |
+| **Form PF → Z.1 leverage** | FAIL | 0.086 | Borderline — SEC data nearly predicts Fed data at 10% level |
+
+Full test results saved to `outputs/reports/cross_source_tests.csv`.
+
+## Visualizations
+
+16 publication-quality charts generated to `outputs/figures/`:
+
+| Category | Charts |
+|----------|--------|
+| **Z.1 Balance Sheet** | Total assets, asset composition, debt securities, liability structure, balance sheet overview, derivative exposure, borrowing patterns, correlation heatmap |
+| **Form PF** | GAV/NAV leverage, strategy allocation, concentration trends |
+| **CFTC Swaps** | Clearing rates, notional outstanding |
+| **FCM** | Capital & adequacy, market concentration |
+| **Cross-Source** | Z.1 vs Form PF leverage comparison |
+
 ## Setup
 
 ```bash
@@ -86,6 +115,15 @@ python -m src.data.fetch_dtcc
 
 # Download CFTC FCM financial reports (49 files, 2022–2026)
 python -m src.data.fetch_fcm
+
+# Parse all data sources into processed CSVs
+python -m src.data.parse_form_pf    # 141 sheets → 19 CSVs
+python -m src.data.parse_fcm        # 49 files → 5 CSVs
+python -m src.data.parse_dtcc       # 1,310 ZIPs → 3 CSVs
+python -m src.data.parse_swaps      # 302 files → 3 CSVs
+
+# Run cross-source analysis (alignment, reconciliation, 18 hypothesis tests)
+python -m src.analysis.cross_source
 
 # Run the analysis notebook
 jupyter notebook notebooks/hedge_fund_analysis.ipynb
@@ -111,11 +149,16 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   │   ├── fetch_swaps.py      # CFTC weekly swap report downloader
 │   │   ├── fetch_dtcc.py       # DTCC trade-level swap data downloader
 │   │   ├── fetch_fcm.py        # CFTC FCM financial report downloader
+│   │   ├── parse_form_pf.py    # Form PF Excel parser (141 sheets → 19 CSVs)
+│   │   ├── parse_fcm.py        # FCM financial report parser (49 files → 5 CSVs)
+│   │   ├── parse_dtcc.py       # DTCC daily swap report parser (1,310 ZIPs → 3 CSVs)
+│   │   ├── parse_swaps.py      # CFTC weekly swap report parser (302 files → 3 CSVs)
 │   │   └── prepare.py          # Data cleaning and transformation
 │   ├── analysis/
-│   │   └── metrics.py          # Derived metrics and statistics
+│   │   ├── metrics.py          # Derived metrics and statistics
+│   │   └── cross_source.py     # Cross-source alignment, reconciliation, 18 hypothesis tests
 │   └── visualization/
-│       └── plots.py            # matplotlib/seaborn chart functions
+│       └── plots.py            # 18 matplotlib/seaborn chart functions
 ├── notebooks/
 │   └── hedge_fund_analysis.ipynb
 └── outputs/
@@ -127,9 +170,21 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 
 Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests, python-dotenv
 
+## Processed Data
+
+30 CSVs produced in `data/processed/` from the raw data:
+
+| Source | Files | Key Outputs |
+|--------|-------|-------------|
+| Form PF | 19 | GAV/NAV, strategy allocation, concentration, leverage distribution, notional exposure, liquidity, fair value, geography, sector, borrowing, fund counts |
+| FCM | 5 | Monthly industry totals, quarterly aggregates, top brokers, concentration (HHI) |
+| DTCC | 3 | Daily summary, product breakdown, quarterly aggregates |
+| CFTC Swaps | 3 | Weekly time series, long format, quarterly aggregates |
+| Z.1 | 1 | Unified balance sheet with derived metrics |
+
 ## Status
 
-**Active development.** Currently assembling and cross-referencing data sources. Next phase: build unified time series across all sources, decompose the derivatives black box, and map the counterparty network.
+**Active development.** All 9 data sources acquired and parsed. Cross-source analysis pipeline operational with 18 hypothesis tests. Next: decompose the derivatives black box and map the counterparty network.
 
 ## License & Citation
 

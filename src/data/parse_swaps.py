@@ -62,12 +62,17 @@ def parse_overview_sheet(filepath):
     header = rows[0]
 
     # Extract dates from header
+    # Some Excel files return dates as serial numbers (floats) instead of datetime
+    _excel_epoch = datetime(1899, 12, 30)
     dates = []
     for val in header[1:]:
         if val is None:
             dates.append(None)
         elif isinstance(val, datetime):
             dates.append(val)
+        elif isinstance(val, (int, float)) and 30000 < val < 60000:
+            # Excel serial date number
+            dates.append(_excel_epoch + pd.Timedelta(days=int(val)))
         else:
             try:
                 dates.append(pd.to_datetime(val))
