@@ -10,39 +10,12 @@ Data: ~1,825 daily files across 5 asset classes (2025-03-13 onward).
 
 import os
 import zipfile
-import io
+import gc
 import pandas as pd
-import numpy as np
 from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw', 'dtcc')
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'processed')
-
-# Columns we extract from each 110-column CSV
-KEEP_COLS = [
-    'Dissemination Identifier',
-    'Action type',
-    'Asset Class',
-    'Cleared',
-    'Notional amount-Leg 1',
-    'Notional amount-Leg 2',
-    'Notional currency-Leg 1',
-    'Prime brokerage transaction indicator',
-    'Block trade election indicator',
-    'Platform identifier',
-    'Effective Date',
-    'Expiration Date',
-    'Underlying Asset Name',
-]
-
-
-def _parse_notional(val):
-    """Parse notional amount strings like '110,000,000' to float."""
-    if val is None or val == '':
-        return np.nan
-    if isinstance(val, (int, float)):
-        return float(val)
-    return pd.to_numeric(str(val).replace(',', ''), errors='coerce')
 
 
 def _extract_date_from_filename(filename):
@@ -63,7 +36,15 @@ def _extract_asset_class(filename):
 
 
 def parse_single_zip(filepath):
-    """Parse one DTCC cumulative ZIP file and return aggregated summary."""
+    """Parse one DTCC cumulative ZIP file and return aggregated summary.
+
+    Uses Python's csv module (not pandas) to stream rows without loading the
+    entire file into memory. This keeps peak memory under ~5 MB per file
+    even for 30K+ row CSVs.
+    """
+    import csv as csv_mod
+    import io
+
     filename = os.path.basename(filepath)
     date = _extract_date_from_filename(filename)
     asset_class = _extract_asset_class(filename)
@@ -78,73 +59,91 @@ def parse_single_zip(filepath):
                 return None
 
             with zf.open(csv_names[0]) as csv_file:
-                # Read only the columns we need
-                try:
-                    df = pd.read_csv(csv_file, usecols=lambda c: c in KEEP_COLS,
-                                     dtype=str, low_memory=False)
-                except Exception:
+                reader = csv_mod.reader(io.TextIOWrapper(csv_file, encoding='utf-8'))
+                header = next(reader, None)
+                if not header:
                     return None
 
-        if df.empty:
+                # Find column indices for the 5 fields we need
+                col_idx = {}
+                for i, col in enumerate(header):
+                    col = col.strip()
+                    if col == 'Notional amount-Leg 1':
+                        col_idx['notional'] = i
+                    elif col == 'Notional currency-Leg 1':
+                        col_idx['currency'] = i
+                    elif col == 'Cleared':
+                        col_idx['cleared'] = i
+                    elif col == 'Prime brokerage transaction indicator':
+                        col_idx['pb'] = i
+                    elif col == 'Block trade election indicator':
+                        col_idx['block'] = i
+
+                # Single-pass aggregation
+                trade_count = 0
+                total_notional = 0.0
+                usd_notional = 0.0
+                cleared_count = 0
+                cleared_notional = 0.0
+                pb_count = 0
+                block_count = 0
+
+                notional_idx = col_idx.get('notional')
+                currency_idx = col_idx.get('currency')
+                cleared_idx = col_idx.get('cleared')
+                pb_idx = col_idx.get('pb')
+                block_idx = col_idx.get('block')
+
+                for row in reader:
+                    trade_count += 1
+
+                    # Parse notional (cap at $100B to filter DTCC data errors)
+                    notional_val = 0.0
+                    if notional_idx is not None and notional_idx < len(row):
+                        raw = row[notional_idx].replace(',', '').strip()
+                        if raw:
+                            try:
+                                notional_val = float(raw)
+                                if notional_val > 1e11:
+                                    notional_val = 0.0
+                            except ValueError:
+                                pass
+                    total_notional += notional_val
+
+                    # Cleared
+                    if cleared_idx is not None and cleared_idx < len(row):
+                        cl = row[cleared_idx].strip().upper()
+                        if cl in ('Y', 'I', 'TRUE'):
+                            cleared_count += 1
+                            cleared_notional += notional_val
+
+                    # USD notional
+                    if currency_idx is not None and currency_idx < len(row):
+                        if row[currency_idx].strip() == 'USD':
+                            usd_notional += notional_val
+
+                    # Prime brokerage
+                    if pb_idx is not None and pb_idx < len(row):
+                        if row[pb_idx].strip().upper() in ('TRUE', 'Y'):
+                            pb_count += 1
+
+                    # Block trade
+                    if block_idx is not None and block_idx < len(row):
+                        if row[block_idx].strip().upper() in ('TRUE', 'Y'):
+                            block_count += 1
+
+        if trade_count == 0:
             return None
-
-        # Parse notional amounts
-        for col in ['Notional amount-Leg 1', 'Notional amount-Leg 2']:
-            if col in df.columns:
-                df[col] = df[col].apply(_parse_notional)
-
-        trade_count = len(df)
-
-        # Total notional (use Leg 1 as primary)
-        notional_col = 'Notional amount-Leg 1' if 'Notional amount-Leg 1' in df.columns else None
-        total_notional = df[notional_col].sum() if notional_col else 0
-
-        # Cleared vs uncleared
-        cleared_count = 0
-        cleared_notional = 0
-        if 'Cleared' in df.columns and notional_col:
-            cleared_mask = df['Cleared'].str.upper().isin(['Y', 'I', 'TRUE'])
-            cleared_count = cleared_mask.sum()
-            cleared_notional = df.loc[cleared_mask, notional_col].sum()
-
-        # Prime brokerage
-        pb_count = 0
-        if 'Prime brokerage transaction indicator' in df.columns:
-            pb_count = df['Prime brokerage transaction indicator'].str.upper().isin(
-                ['TRUE', 'Y']).sum()
-
-        # Block trades
-        block_count = 0
-        if 'Block trade election indicator' in df.columns:
-            block_count = df['Block trade election indicator'].str.upper().isin(
-                ['TRUE', 'Y']).sum()
-
-        # USD notional (filter to USD only for comparability)
-        usd_notional = 0
-        if 'Notional currency-Leg 1' in df.columns and notional_col:
-            usd_mask = df['Notional currency-Leg 1'] == 'USD'
-            usd_notional = df.loc[usd_mask, notional_col].sum()
-
-        # Product breakdown (top products by notional)
-        product_data = []
-        if 'Underlying Asset Name' in df.columns and notional_col:
-            product_groups = df.groupby('Underlying Asset Name').agg(
-                trade_count=('Dissemination Identifier', 'count'),
-                total_notional=(notional_col, 'sum')
-            ).reset_index()
-            product_groups['date'] = date
-            product_groups['asset_class'] = asset_class
-            product_data = product_groups
 
         summary = {
             'date': date,
             'asset_class': asset_class,
             'trade_count': trade_count,
-            'total_notional': total_notional,
-            'usd_notional': usd_notional,
+            'total_notional_bn': total_notional / 1e9,
+            'usd_notional_bn': usd_notional / 1e9,
             'cleared_count': cleared_count,
-            'cleared_notional': cleared_notional,
-            'uncleared_notional': total_notional - cleared_notional,
+            'cleared_notional_bn': cleared_notional / 1e9,
+            'uncleared_notional_bn': (total_notional - cleared_notional) / 1e9,
             'cleared_pct': cleared_count / trade_count if trade_count > 0 else 0,
             'pb_count': pb_count,
             'pb_pct': pb_count / trade_count if trade_count > 0 else 0,
@@ -152,14 +151,39 @@ def parse_single_zip(filepath):
             'block_pct': block_count / trade_count if trade_count > 0 else 0,
         }
 
-        return summary, product_data
+        return summary
 
-    except (zipfile.BadZipFile, Exception):
+    except Exception as e:
+        print(f"  WARNING: {os.path.basename(filepath)}: {e}")
         return None
 
 
+SUMMARY_FIELDS = [
+    'date', 'asset_class', 'trade_count',
+    'total_notional_bn', 'usd_notional_bn',
+    'cleared_count', 'cleared_notional_bn', 'uncleared_notional_bn',
+    'cleared_pct', 'pb_count', 'pb_pct', 'block_count', 'block_pct',
+]
+
+
+def _validate_row(summary):
+    """Validate a parsed summary row. Returns list of warnings (empty = OK)."""
+    warnings = []
+    if summary['trade_count'] <= 0:
+        warnings.append('zero trades')
+    if summary['total_notional_bn'] < 0:
+        warnings.append(f'negative notional: {summary["total_notional_bn"]:.2f}')
+    if not (0 <= summary['cleared_pct'] <= 1):
+        warnings.append(f'cleared_pct out of range: {summary["cleared_pct"]:.3f}')
+    if not (0 <= summary['pb_pct'] <= 1):
+        warnings.append(f'pb_pct out of range: {summary["pb_pct"]:.3f}')
+    return warnings
+
+
 def parse_all_dtcc(data_dir=None, output_dir=None):
-    """Parse all DTCC cumulative ZIP files and produce processed CSVs."""
+    """Parse all DTCC cumulative ZIP files, streaming rows directly to CSV."""
+    import csv
+
     if data_dir is None:
         data_dir = DATA_DIR
     if output_dir is None:
@@ -168,66 +192,100 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
 
     files = sorted([f for f in os.listdir(data_dir) if f.endswith('.zip')])
-    print(f"Parsing {len(files)} DTCC cumulative reports...")
+    print(f"Parsing {len(files)} DTCC cumulative reports...", flush=True)
 
-    summaries = []
-    all_products = []
+    summary_path = os.path.join(output_dir, 'dtcc_daily_summary.csv')
+    error_path = os.path.join(output_dir, 'dtcc_parse_errors.log')
+
+    # Resume support: skip already-parsed dates (use csv module, not pandas)
+    existing_keys = set()
+    if os.path.exists(summary_path):
+        with open(summary_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                existing_keys.add((str(row['date'])[:10], row['asset_class']))
+        print(f"  Resuming: {len(existing_keys)} rows already saved", flush=True)
+
+    write_header = len(existing_keys) == 0
+    parsed = 0
     failed = 0
+    skipped = 0
+    warned = 0
 
-    for i, f in enumerate(files):
-        filepath = os.path.join(data_dir, f)
-        result = parse_single_zip(filepath)
+    with open(summary_path, 'a', newline='') as csvfile, \
+         open(error_path, 'a') as errlog:
+        writer = csv.DictWriter(csvfile, fieldnames=SUMMARY_FIELDS)
+        if write_header:
+            writer.writeheader()
 
-        if result is None:
-            failed += 1
-            continue
+        for i, f in enumerate(files):
+            date = _extract_date_from_filename(f)
+            asset_class = _extract_asset_class(f)
+            if date and (date.strftime('%Y-%m-%d'), asset_class) in existing_keys:
+                skipped += 1
+                continue
 
-        summary, product_data = result
-        summaries.append(summary)
-        if isinstance(product_data, pd.DataFrame) and not product_data.empty:
-            all_products.append(product_data)
+            filepath = os.path.join(data_dir, f)
+            summary = parse_single_zip(filepath)
 
-        if (i + 1) % 100 == 0:
-            print(f"  [{i+1}/{len(files)}] processed...")
+            if summary is None:
+                failed += 1
+                errlog.write(f"FAIL: {f}\n")
+                continue
 
-    if not summaries:
+            # Validate before writing
+            warnings = _validate_row(summary)
+            if warnings:
+                warned += 1
+                errlog.write(f"WARN: {f}: {'; '.join(warnings)}\n")
+
+            # Stream write — one row at a time, no memory accumulation
+            summary['date'] = summary['date'].strftime('%Y-%m-%d')
+            writer.writerow(summary)
+            csvfile.flush()
+            parsed += 1
+
+            if (i + 1) % 50 == 0:
+                gc.collect()
+                print(f"  [{i+1}/{len(files)}] {parsed} parsed, {skipped} skipped, "
+                      f"{failed} failed, {warned} warnings", flush=True)
+
+    total_rows = parsed + len(existing_keys)
+    if total_rows == 0:
         print("No DTCC data parsed!")
         return
 
-    # --- Daily summary ---
-    daily = pd.DataFrame(summaries)
+    print(f"  Saved dtcc_daily_summary.csv ({total_rows} rows)", flush=True)
+
+    # --- Quarterly aggregation (lightweight read of the flat CSV) ---
+    daily = pd.read_csv(summary_path)
     daily = daily.sort_values(['date', 'asset_class'])
-    daily.to_csv(os.path.join(output_dir, 'dtcc_daily_summary.csv'), index=False)
-    print(f"  Saved dtcc_daily_summary.csv ({len(daily)} rows)")
+    daily.to_csv(summary_path, index=False)
 
-    # --- Product breakdown ---
-    if all_products:
-        products = pd.concat(all_products, ignore_index=True)
-        products = products.sort_values(['date', 'asset_class', 'total_notional'], ascending=[True, True, False])
-        products.to_csv(os.path.join(output_dir, 'dtcc_product_daily.csv'), index=False)
-        print(f"  Saved dtcc_product_daily.csv ({len(products)} rows)")
-
-    # --- Quarterly aggregation ---
-    daily['quarter'] = pd.to_datetime(daily['date']).dt.to_period('Q').astype(str)
+    daily['date'] = pd.to_datetime(daily['date'])
+    daily['quarter'] = daily['date'].dt.to_period('Q').astype(str)
     quarterly = daily.groupby(['quarter', 'asset_class']).agg(
         trading_days=('date', 'count'),
         total_trades=('trade_count', 'sum'),
         avg_daily_trades=('trade_count', 'mean'),
-        total_notional=('total_notional', 'sum'),
-        avg_daily_notional=('total_notional', 'mean'),
+        total_notional_bn=('total_notional_bn', 'sum'),
+        avg_daily_notional_bn=('total_notional_bn', 'mean'),
         avg_cleared_pct=('cleared_pct', 'mean'),
         avg_pb_pct=('pb_pct', 'mean'),
         avg_block_pct=('block_pct', 'mean'),
     ).reset_index()
     quarterly.to_csv(os.path.join(output_dir, 'dtcc_quarterly.csv'), index=False)
-    print(f"  Saved dtcc_quarterly.csv ({len(quarterly)} rows)")
+    print(f"  Saved dtcc_quarterly.csv ({len(quarterly)} rows)", flush=True)
 
     # --- Summary ---
-    print(f"\nDone! {len(files)} files parsed, {failed} failed.")
+    print(f"\nDone! {len(files)} files: {parsed} parsed, {skipped} resumed, "
+          f"{failed} failed, {warned} warnings.", flush=True)
+    if failed > 0:
+        print(f"  See {error_path} for details", flush=True)
     for ac in daily['asset_class'].unique():
         ac_data = daily[daily['asset_class'] == ac]
         print(f"  {ac}: {len(ac_data)} days, {ac_data['trade_count'].sum():,.0f} total trades, "
-              f"avg cleared {ac_data['cleared_pct'].mean():.1%}")
+              f"avg cleared {ac_data['cleared_pct'].mean():.1%}", flush=True)
 
 
 if __name__ == '__main__':

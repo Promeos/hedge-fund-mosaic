@@ -175,11 +175,10 @@ def parse_borrowing(filepath):
     melted = _melt_two_level(df, 'type', 'subtype', value_name='amount_bn', time_col='month')
     melted['source'] = 'Tab.8.27'
 
-    # Tab.8.34: Borrowing by creditor type (monthly) — two-level
+    # Tab.8.34: Borrowing by creditor type (quarterly) — single-level
     try:
-        df34 = parse_two_level_table(filepath, 'Tab.8.34', col_names=['creditor_type', 'subtype'])
-        melted34 = _melt_two_level(df34, 'creditor_type', 'subtype',
-                                   value_name='amount_bn', time_col='month')
+        df34 = parse_simple_table(filepath, 'Tab.8.34', label_col='creditor_type')
+        melted34 = _melt_quarterly(df34, label_col='creditor_type', value_name='share')
         melted34['source'] = 'Tab.8.34'
     except Exception:
         melted34 = pd.DataFrame()
@@ -363,12 +362,14 @@ def parse_fair_value(filepath):
 
 
 def parse_geography(filepath):
-    """Tab.3.1-3.2: Geographic distribution."""
+    """Tab.3.1-3.2: Geographic distribution (two-level: fund_universe + country)."""
     results = []
     for tab in ['Tab.3.1', 'Tab.3.2']:
         try:
-            df = parse_simple_table(filepath, tab, label_col='region')
-            melted = _melt_quarterly(df, label_col='region', value_name='amount')
+            df = parse_two_level_table(filepath, tab,
+                                        col_names=['fund_universe', 'country'])
+            melted = _melt_two_level(df, 'fund_universe', 'country',
+                                      value_name='share', time_col='quarter')
             melted['table'] = tab
             results.append(melted)
         except Exception:

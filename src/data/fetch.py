@@ -195,7 +195,14 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
         window = df_filings[
             (df_filings['filing_date'] >= start_date) &
             (df_filings['filing_date'] <= end_date)
-        ]
+        ].copy()
+
+        # Deduplicate amendments: keep 13F-HR/A over 13F-HR for same quarter
+        # Derive report_period from filing_date (filings are due ~45 days after quarter-end)
+        window['report_quarter'] = pd.to_datetime(window['filing_date']).apply(
+            lambda d: (d - pd.DateOffset(months=2)).to_period('Q').strftime('%YQ%q'))
+        window = window.sort_values('form', ascending=False)  # 13F-HR/A sorts after 13F-HR
+        window = window.drop_duplicates(subset=['fund', 'report_quarter'], keep='first')
 
         all_holdings = []
         for _, filing in window.iterrows():
@@ -266,9 +273,9 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
                         all_holdings.append({
                             "fund": fund_name,
                             "filing_date": filing["filing_date"],
-                            "report_period": filing["filing_date"][:7],
-                            "issuer": name_of_issuer,
-                            "title": title,
+                            "report_period": filing.get("report_quarter", filing["filing_date"][:7]),
+                            "issuer": ' '.join(name_of_issuer.split()),
+                            "title": ' '.join(title.split()),
                             "cusip": cusip,
                             "value_thousands": int(value) if value else 0,
                             "shares": int(shares) if shares else 0,

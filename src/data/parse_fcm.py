@@ -120,6 +120,13 @@ def parse_all_fcm(data_dir=None, output_dir=None):
 
     # --- All FCMs, all months ---
     fcm_all = pd.concat(all_dfs, ignore_index=True)
+
+    # Normalize broker name inconsistencies
+    name_fixes = {
+        'CHARLES SCHWAB FUTURES & FOREX LLC': 'CHARLES SCHWAB FUTURES AND FOREX LLC',
+    }
+    fcm_all['fcm_name'] = fcm_all['fcm_name'].replace(name_fixes)
+
     fcm_all = fcm_all.sort_values(['as_of_date', 'fcm_name'])
     fcm_all.to_csv(os.path.join(output_dir, 'fcm_monthly_all.csv'), index=False)
     print(f"  Saved fcm_monthly_all.csv ({len(fcm_all)} rows)")

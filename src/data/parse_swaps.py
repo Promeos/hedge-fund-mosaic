@@ -11,10 +11,20 @@ Data: ~600 weekly files (2013-2026).
 """
 
 import os
+import re
 import pandas as pd
 import numpy as np
 import openpyxl
 from datetime import datetime
+
+ASSET_CLASS_PATTERNS = [
+    (re.compile(r'total\s+interest\s+rate', re.IGNORECASE), 'ir'),
+    (re.compile(r'total\s+cross.?currency', re.IGNORECASE), 'cross_currency'),
+    (re.compile(r'total\s+credit', re.IGNORECASE), 'credit'),
+    (re.compile(r'total\s+fx', re.IGNORECASE), 'fx'),
+    (re.compile(r'total\s+equit', re.IGNORECASE), 'equity'),
+    (re.compile(r'total\s+commodit', re.IGNORECASE), 'commodity'),
+]
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw', 'swaps')
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'processed')
@@ -43,7 +53,8 @@ def parse_overview_sheet(filepath):
     """
     try:
         wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
-    except Exception:
+    except Exception as e:
+        print(f"  WARNING: Could not open {os.path.basename(filepath)}: {e}")
         return pd.DataFrame()
 
     if '1' not in wb.sheetnames:
@@ -58,8 +69,10 @@ def parse_overview_sheet(filepath):
         return pd.DataFrame()
 
     # Row 0: header with dates
-    # Rows 1-9: data (IR total/cleared/uncleared, Credit total/cleared/uncleared, FX total/cleared/uncleared)
     header = rows[0]
+
+    # Infer year from filename for files with abbreviated date headers
+    file_date = _extract_date_from_filename(os.path.basename(filepath))
 
     # Extract dates from header
     # Some Excel files return dates as serial numbers (floats) instead of datetime
@@ -77,20 +90,63 @@ def parse_overview_sheet(filepath):
             try:
                 dates.append(pd.to_datetime(val))
             except Exception:
-                dates.append(None)
+                # Try abbreviated dates like "Dec 7" or "January 3" (early 2013-2014)
+                if file_date and isinstance(val, str):
+                    try:
+                        # Parse month+day, infer year from filename
+                        parsed = pd.to_datetime(val, format='mixed')
+                        dates.append(parsed.replace(year=file_date.year))
+                    except Exception:
+                        for fmt in ('%B %d', '%b %d'):
+                            try:
+                                parsed = datetime.strptime(val.strip(), fmt)
+                                # Use filename year; adjust if month > filename month
+                                # (e.g. file is Jan 2013 but column is "Dec" = Dec 2012)
+                                year = file_date.year
+                                if parsed.month > file_date.month + 1:
+                                    year -= 1
+                                dates.append(parsed.replace(year=year))
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            dates.append(None)
+                else:
+                    dates.append(None)
 
-    # Extract metric rows
-    metric_names = [
-        'ir_total', 'ir_cleared', 'ir_uncleared',
-        'credit_total', 'credit_cleared', 'credit_uncleared',
-        'fx_total', 'fx_cleared', 'fx_uncleared',
-    ]
-
+    # Dynamic label-based row mapping — handles all CFTC layout eras
     records = []
-    for row_idx, metric in enumerate(metric_names):
-        if row_idx + 1 >= len(rows):
-            break
-        row = rows[row_idx + 1]
+    current_class = None
+
+    for row in rows[1:]:
+        label = str(row[0] or '').strip()
+        label_clean = label.lower().replace('*', '').strip()
+
+        # Skip empty rows, grand total, and footnote text
+        if not label_clean or label_clean == 'total' or len(label_clean) > 60:
+            current_class = None
+            continue
+
+        # Check if this is an asset class header row (e.g. "Total Interest Rate")
+        matched = False
+        for pattern, prefix in ASSET_CLASS_PATTERNS:
+            if pattern.search(label_clean):
+                current_class = prefix
+                metric = f'{prefix}_total'
+                matched = True
+                break
+
+        if not matched and current_class:
+            if 'uncleared' in label_clean:
+                metric = f'{current_class}_uncleared'
+            elif 'cleared' in label_clean:
+                metric = f'{current_class}_cleared'
+            else:
+                continue  # Unknown sub-row, skip
+        elif not matched:
+            continue
+
+        # Extract values for all date columns
         for col_idx, date in enumerate(dates):
             if date is None:
                 continue
@@ -118,14 +174,14 @@ def parse_all_swaps(data_dir=None, output_dir=None):
     print(f"Parsing {len(files)} CFTC weekly swap reports...")
 
     all_records = []
-    failed = 0
+    failed_files = []
 
     for i, f in enumerate(files):
         filepath = os.path.join(data_dir, f)
         df = parse_overview_sheet(filepath)
 
         if df.empty:
-            failed += 1
+            failed_files.append(f)
             continue
 
         all_records.append(df)
@@ -158,6 +214,10 @@ def parse_all_swaps(data_dir=None, output_dir=None):
         wide['credit_cleared_pct'] = wide['credit_cleared'] / wide['credit_total']
     if 'fx_total' in wide.columns and 'fx_cleared' in wide.columns:
         wide['fx_cleared_pct'] = wide['fx_cleared'] / wide['fx_total']
+    if 'cross_currency_total' in wide.columns and 'cross_currency_cleared' in wide.columns:
+        wide['cross_currency_cleared_pct'] = wide['cross_currency_cleared'] / wide['cross_currency_total']
+    if 'equity_total' in wide.columns and 'equity_cleared' in wide.columns:
+        wide['equity_cleared_pct'] = wide['equity_cleared'] / wide['equity_total']
 
     # --- Save weekly time series ---
     wide.to_csv(os.path.join(output_dir, 'swaps_weekly.csv'), index=False)
@@ -184,7 +244,13 @@ def parse_all_swaps(data_dir=None, output_dir=None):
     print(f"  Saved swaps_quarterly.csv ({len(quarterly)} rows)")
 
     # --- Summary ---
-    print(f"\nDone! {len(files)} files parsed, {failed} failed.")
+    print(f"\nDone! {len(files)} files parsed, {len(failed_files)} failed.")
+    if failed_files:
+        print("  Failed files:")
+        for ff in failed_files[:20]:
+            print(f"    - {ff}")
+        if len(failed_files) > 20:
+            print(f"    ... and {len(failed_files) - 20} more")
     latest = wide.iloc[-1]
     print(f"  Latest date: {latest['date']}")
     if 'ir_total' in wide.columns:
