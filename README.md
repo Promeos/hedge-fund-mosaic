@@ -10,10 +10,11 @@ The hedge fund industry reports to a dozen different regulators in a dozen diffe
 
 This project pulls from **9 public data sources** across the Federal Reserve, SEC, CFTC, DTCC, and CBOE to build a unified picture of:
 
-- **$12.6 trillion** in gross assets (Form PF) — 4x what the Fed reports
+- **$3.3 trillion** in total assets (Fed Z.1 Q3 2025) — with **$12.6T** in gross assets via Form PF
 - **$20.2 trillion** in derivative exposure — 3.7x their net asset value
 - **$415 trillion** in interest rate swap notional flowing through the system weekly
-- **87,330 individual equity holdings** across 8 of the largest funds — deduped, amendment-resolved sample snapshots from **2020Q4–2021Q2**
+- **384,723 individual equity holdings** across 8 of the largest funds — rolling 2-year window (2024–2026), amendment-deduped
+- **Over 1 million OTC derivative trades per day** flowing through DTCC
 - The complete **borrowing, leverage, and counterparty structure** of an industry that answers to no single regulator
 
 ## Data Sources
@@ -23,7 +24,7 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 | 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | Raw FRED series span 1945–2025; usable hedge fund observations begin 2012 Q4 |
 | 2 | **SEC Form PF** | Private fund statistics — GAV, NAV, leverage, derivatives, borrowing by creditor, strategy allocation, concentration | 2013–2025, quarterly + monthly |
 | 3 | **CFTC Weekly Swaps** | OTC derivatives market — interest rate, credit, and FX swap notional, volumes, counterparty splits | 2013–2026, weekly |
-| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped sample snapshots | Bundled local sample: 2020Q4–2021Q2 |
+| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped | Rolling 2-year window (currently 2024–2026) |
 | 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
 | 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
 | 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
@@ -33,12 +34,13 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 ## What We've Found So Far
 
 ### The Industry Is 4x Larger Than Reported
-The Fed's Z.1 shows $3.07T in hedge fund assets. SEC Form PF shows **$12.6T in gross assets** and **$20.2T in derivatives**. The difference is leverage and off-balance-sheet exposure that the Fed's flow-of-funds framework doesn't capture.
+The Fed's Z.1 shows **$3.26T** in hedge fund assets (Q3 2025, all-time high, +16% YoY). SEC Form PF shows **$12.6T in gross assets** and **$20.2T in derivatives**. The difference is leverage and off-balance-sheet exposure that the Fed's flow-of-funds framework doesn't capture.
 
 ### Extreme Concentration
 - Top 10 funds control **8.2%** of industry NAV
 - Top 500 funds control **54.8%**
-- In the bundled 13F sample, Citadel's largest filing is **$384.6B** (2021-02-16)
+- Combined 13F equity AUM across 8 mega funds: **$831B** (Q4 2025 shares only)
+- NVIDIA held by all 8 funds ($19.1B combined); iShares ETFs are the #1 position ($20.3B)
 - Citadel filed **854 SC 13G forms** (5%+ ownership in 854 companies)
 
 ### The Borrowing Machine
@@ -47,8 +49,8 @@ The Fed's Z.1 shows $3.07T in hedge fund assets. SEC Form PF shows **$12.6T in g
 - In **2025Q1**, **63.9%** of creditors are U.S. financial institutions and **35.3%** are non-U.S. financial institutions
 - In **2025-03**, qualifying hedge funds held **$2.8T** in reverse repo and **$2.6T** in prime-broker financing
 
-### Leverage Is Mean-Reverting
-Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is stationary — it oscillates around 0.43x and self-corrects. Peak was 0.48x in Q1 2020. This implies systemic deleveraging mechanisms are working, but also that leverage always rebuilds.
+### Leverage Is Mean-Reverting — But at 98th Percentile
+Augmented Dickey-Fuller test (p=0.02) confirms the industry's leverage ratio is stationary — it oscillates around 0.43x and self-corrects. But as of Q3 2025, leverage hit **0.485x** — the **98th percentile** since 1945, climbing for 5 consecutive quarters. Previous peak was 0.48x in Q1 2020. This implies systemic deleveraging mechanisms are working, but also that leverage always rebuilds.
 
 ### The Derivatives Iceberg
 - **$4.8T long / $4.9T short** in interest rate derivatives — nearly perfectly hedged
@@ -181,7 +183,7 @@ Core processed outputs in `data/processed/`:
 
 ## Status
 
-**Active development.** All 9 data sources in the local bundle are acquired and parsed, and the cross-source analysis runs end-to-end from the current codebase. The bundled 13F sample is amendment-deduped but currently limited to **2020Q4–2021Q2**, so the 13F/Form PF concentration comparison is reported as N/A rather than overstated. Next: decompose the derivatives black box and map the counterparty network.
+**Active development.** All 9 data sources are acquired and parsed, and the cross-source analysis runs end-to-end. The 13F fetcher now uses a rolling 2-year window (currently 2024–2026) with 384,723 holdings across 8 funds. All fetchers use dynamic date ranges. 32 tests passing, ruff-clean codebase. Next: decompose the derivatives black box and map the counterparty network.
 
 ## License & Citation
 
@@ -191,6 +193,8 @@ This project is licensed under [CC BY-SA 4.0](https://creativecommons.org/licens
 
 ### How to cite
 
+This project includes a [`CITATION.cff`](CITATION.cff) file for automated citation. You can also cite manually:
+
 ```
 Ortiz, C. (2026). Hedge Fund X-Ray: Reconstructing the U.S. hedge fund industry
 from public regulatory data. https://github.com/Promeos/hedge-fund-xray
@@ -199,7 +203,7 @@ from public regulatory data. https://github.com/Promeos/hedge-fund-xray
 ```bibtex
 @misc{ortiz2026hedgefundxray,
   author = {Ortiz, Christopher},
-  title = {Hedge Fund X-Ray},
+  title = {Hedge Fund X-Ray: Reconstructing the U.S. Hedge Fund Industry from Public Regulatory Data},
   year = {2026},
   publisher = {GitHub},
   url = {https://github.com/Promeos/hedge-fund-xray}

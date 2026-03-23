@@ -11,19 +11,20 @@ including notional amounts, counterparty types, clearing status, and pricing det
 
 import os
 import time
-import requests
 from datetime import datetime, timedelta
 
-SAVE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw', 'dtcc')
+import requests
+
+SAVE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "dtcc")
 
 BASE_URL = "https://pddata.dtcc.com/ppd/api/report/cumulative/cftc"
 
 ASSET_CLASSES = ["RATES", "CREDITS", "COMMODITIES", "EQUITIES", "FOREX"]
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.3.1 Safari/605.1.15',
-    'Accept': 'application/json, text/plain, */*',
-    'Referer': 'https://pddata.dtcc.com/ppd/cftcdashboard',
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.3.1 Safari/605.1.15",
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://pddata.dtcc.com/ppd/cftcdashboard",
 }
 
 # Data starts from this date
@@ -59,8 +60,8 @@ def download_report(date, asset_class, save_dir):
         resp = requests.get(url, headers=HEADERS, timeout=60)
         if resp.status_code == 200 and len(resp.content) > 500:
             # Verify it's a ZIP file
-            if resp.content[:2] == b'PK':
-                with open(filepath, 'wb') as f:
+            if resp.content[:2] == b"PK":
+                with open(filepath, "wb") as f:
                     f.write(resp.content)
                 return "downloaded"
             else:
@@ -101,14 +102,16 @@ def fetch_all_dtcc_reports(asset_classes=None, start_date=None, end_date=None):
 
         # Progress every 20 dates
         if count % (len(asset_classes) * 20) == 0:
-            total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith('.zip')])
+            total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith(".zip")])
             print(f"  --- Progress: {count}/{total} checked, {total_files} files on disk ---")
 
-    print(f"\nDone! Downloaded: {stats['downloaded']}, Cached: {stats['cached']}, "
-          f"Not found: {stats['not_found']}, Failed: {stats['failed']}")
-    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith('.zip')])
+    print(
+        f"\nDone! Downloaded: {stats['downloaded']}, Cached: {stats['cached']}, "
+        f"Not found: {stats['not_found']}, Failed: {stats['failed']}"
+    )
+    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith(".zip")])
     print(f"Files in {SAVE_DIR}: {total_files}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch_all_dtcc_reports()

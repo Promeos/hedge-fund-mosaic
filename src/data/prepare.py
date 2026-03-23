@@ -1,4 +1,10 @@
-import numpy as np
+"""Data cleaning and transformation for FRED Z.1 balance sheet and VIX data.
+
+Merges quarterly balance sheet observations with VIX volatility data,
+handling date alignment and numeric coercion. Output is the canonical
+analysis-ready DataFrame used by metrics and visualization modules.
+"""
+
 import pandas as pd
 
 
@@ -9,9 +15,7 @@ def prep_financial_report(df):
     numeric_cols = df.columns[2:]
 
     df[date_col] = pd.to_datetime(df.loc[:, date_col])
-    df[numeric_cols] = df.loc[:, numeric_cols].apply(pd.to_numeric,
-                                                     downcast='float',
-                                                     errors='coerce')
+    df[numeric_cols] = df.loc[:, numeric_cols].apply(pd.to_numeric, downcast="float", errors="coerce")
 
     return df
 
@@ -24,7 +28,7 @@ def load_fred_balance_sheet(filepath):
     """
     df = pd.read_csv(filepath, index_col=0, parse_dates=True)
     # Filter to rows with actual data (Q4 2012 onward)
-    df = df.loc['2012-10-01':]
+    df = df.loc["2012-10-01":]
     # Replace remaining zeros with NaN where entire row was zero (pre-reporting)
     return df
 
@@ -36,15 +40,15 @@ def align_vix_to_fred(df_fred, df_vix):
     (2024-03-31 = Q1). This aligns them by mapping both to period quarters.
     """
     # Convert both to quarterly period for matching
-    fred_quarters = df_fred.index.to_period('Q')
-    vix_quarters = df_vix.index.to_period('Q')
+    fred_quarters = df_fred.index.to_period("Q")
+    vix_quarters = df_vix.index.to_period("Q")
 
     df_vix_aligned = df_vix.copy()
     df_vix_aligned.index = vix_quarters
-    df_vix_aligned = df_vix_aligned[~df_vix_aligned.index.duplicated(keep='last')]
+    df_vix_aligned = df_vix_aligned[~df_vix_aligned.index.duplicated(keep="last")]
 
     df_out = df_fred.copy()
     df_out.index = fred_quarters
-    df_out = df_out.join(df_vix_aligned, how='left')
+    df_out = df_out.join(df_vix_aligned, how="left")
     df_out.index = df_fred.index  # Restore original datetime index
     return df_out

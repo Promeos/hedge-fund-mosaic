@@ -10,10 +10,11 @@ Early reports (2013-2014) use inconsistent naming (lowercase, 2-digit years, ran
 
 import os
 import time
-import requests
 from datetime import datetime, timedelta
 
-SAVE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw', 'swaps')
+import requests
+
+SAVE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "swaps")
 
 BASE = "https://www.cftc.gov"
 
@@ -34,8 +35,8 @@ URL_PATTERNS = [
 ]
 
 HEADERS = {
-    'User-Agent': 'HedgeFundIndustryAnalysis admin@financialresearch.dev',
-    'Accept': '*/*',
+    "User-Agent": "HedgeFundIndustryAnalysis admin@financialresearch.dev",
+    "Accept": "*/*",
 }
 
 # Government shutdown: no reports issued
@@ -43,8 +44,10 @@ SHUTDOWN_START = datetime(2018, 12, 22)
 SHUTDOWN_END = datetime(2019, 1, 26)
 
 
-def generate_report_dates(start_year=2013, end_year=2026):
-    """Generate all Monday dates (report dates) from start to end year."""
+def generate_report_dates(start_year=2013, end_year=None):
+    """Generate all Monday dates (report dates) from start to current year."""
+    if end_year is None:
+        end_year = datetime.now().year
     dates = []
     current = datetime(start_year, 1, 1)
     end = datetime(end_year, 12, 31)
@@ -73,15 +76,13 @@ def download_report(date, save_dir):
     year_short = str(date.year)[-2:]
 
     for pattern in URL_PATTERNS:
-        url = BASE + pattern.format(
-            year=date.year, month=date.month, day=date.day, year_short=year_short
-        )
+        url = BASE + pattern.format(year=date.year, month=date.month, day=date.day, year_short=year_short)
         try:
             resp = requests.get(url, headers=HEADERS, timeout=30)
             if resp.status_code == 200 and len(resp.content) > 1000:
                 # Verify it's not an HTML error page
-                if resp.content[:4] == b'PK\x03\x04' or resp.content[:4] == b'\x50\x4b\x03\x04':
-                    with open(filepath, 'wb') as f:
+                if resp.content[:4] == b"PK\x03\x04" or resp.content[:4] == b"\x50\x4b\x03\x04":
+                    with open(filepath, "wb") as f:
                         f.write(resp.content)
                     return "downloaded"
         except requests.RequestException:
@@ -105,7 +106,7 @@ def fetch_all_swaps_reports():
         stats[result] += 1
 
         if result == "downloaded":
-            print(f"  [{i+1}/{len(dates)}] Downloaded {date.strftime('%Y-%m-%d')}")
+            print(f"  [{i + 1}/{len(dates)}] Downloaded {date.strftime('%Y-%m-%d')}")
             time.sleep(0.3)
         elif result == "failed":
             # Reports aren't always on Mondays — try nearby days
@@ -114,7 +115,7 @@ def fetch_all_swaps_reports():
                 alt_date = date + timedelta(days=offset)
                 alt_result = download_report(alt_date, SAVE_DIR)
                 if alt_result == "downloaded":
-                    print(f"  [{i+1}/{len(dates)}] Downloaded {alt_date.strftime('%Y-%m-%d')} (offset {offset:+d})")
+                    print(f"  [{i + 1}/{len(dates)}] Downloaded {alt_date.strftime('%Y-%m-%d')} (offset {offset:+d})")
                     stats["downloaded"] += 1
                     stats["failed"] -= 1
                     found = True
@@ -126,15 +127,15 @@ def fetch_all_swaps_reports():
                     found = True
                     break
             if not found:
-                failed_dates.append(date.strftime('%Y-%m-%d'))
+                failed_dates.append(date.strftime("%Y-%m-%d"))
 
         # Progress update every 50
         if (i + 1) % 50 == 0:
-            total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith('.xlsx')])
-            print(f"  --- Progress: {i+1}/{len(dates)} checked, {total_files} files on disk ---")
+            total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith(".xlsx")])
+            print(f"  --- Progress: {i + 1}/{len(dates)} checked, {total_files} files on disk ---")
 
     print(f"\nDone! Downloaded: {stats['downloaded']}, Cached: {stats['cached']}, Failed: {stats['failed']}")
-    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith('.xlsx')])
+    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith(".xlsx")])
     print(f"Files in {SAVE_DIR}: {total_files}")
 
     if failed_dates:
@@ -145,5 +146,5 @@ def fetch_all_swaps_reports():
             print(f"  ... and {len(failed_dates) - 20} more")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch_all_swaps_reports()

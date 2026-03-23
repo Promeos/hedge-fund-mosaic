@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 # Column names matching FRED Z.1 series used throughout the pipeline
 BALANCE_SHEET_COLS = [
     "Total assets",
@@ -35,31 +34,31 @@ def sample_balance_sheet():
     """5 quarters of synthetic hedge fund balance sheet data (billions USD)."""
     dates = pd.date_range("2020-03-31", periods=5, freq="QE")
     data = {
-        "Total assets":       [10.0, 11.0, 12.0, 11.5, 13.0],
-        "Total liabilities":  [ 7.0,  8.0,  9.0,  8.5, 10.0],
-        "Total net assets":   [ 3.0,  3.0,  3.0,  3.0,  3.0],
+        "Total assets": [10.0, 11.0, 12.0, 11.5, 13.0],
+        "Total liabilities": [7.0, 8.0, 9.0, 8.5, 10.0],
+        "Total net assets": [3.0, 3.0, 3.0, 3.0, 3.0],
         # Cash components
-        "Deposits; asset":                            [0.5, 0.6, 0.7, 0.5, 0.8],
-        "Other cash and cash equivalents; asset":     [0.3, 0.2, 0.4, 0.3, 0.5],
-        "Money market fund shares; asset":            [0.2, 0.2, 0.1, 0.2, 0.2],
+        "Deposits; asset": [0.5, 0.6, 0.7, 0.5, 0.8],
+        "Other cash and cash equivalents; asset": [0.3, 0.2, 0.4, 0.3, 0.5],
+        "Money market fund shares; asset": [0.2, 0.2, 0.1, 0.2, 0.2],
         # Asset breakdown
-        "Corporate equities; asset":                  [4.0, 4.5, 5.0, 4.8, 5.5],
-        "Total debt securities; asset":               [2.0, 2.5, 2.8, 2.7, 3.0],
-        "Total loans; asset":                         [1.5, 1.5, 1.5, 1.5, 1.5],
-        "Derivatives (long value)":                   [1.0, 1.0, 1.2, 1.0, 1.0],
+        "Corporate equities; asset": [4.0, 4.5, 5.0, 4.8, 5.5],
+        "Total debt securities; asset": [2.0, 2.5, 2.8, 2.7, 3.0],
+        "Total loans; asset": [1.5, 1.5, 1.5, 1.5, 1.5],
+        "Derivatives (long value)": [1.0, 1.0, 1.2, 1.0, 1.0],
         # Borrowing totals
-        "Total loans; liability":                     [5.0, 5.5, 6.0, 5.5, 7.0],
+        "Total loans; liability": [5.0, 5.5, 6.0, 5.5, 7.0],
         "Loans, total secured borrowing via prime brokerage; liability": [2.0, 2.5, 3.0, 2.5, 3.5],
-        "Loans, total other secured borrowing; liability":              [2.0, 2.0, 2.0, 2.0, 2.5],
-        "Loans, total unsecured borrowing; liability":                  [1.0, 1.0, 1.0, 1.0, 1.0],
+        "Loans, total other secured borrowing; liability": [2.0, 2.0, 2.0, 2.0, 2.5],
+        "Loans, total unsecured borrowing; liability": [1.0, 1.0, 1.0, 1.0, 1.0],
         # Domestic borrowing components
         "Security repurchase agreements with domestic institutions; liability": [1.0, 1.0, 1.0, 1.0, 1.0],
-        "Loans, secured borrowing via domestic prime brokerages; liability":    [1.5, 1.5, 2.0, 1.5, 2.0],
+        "Loans, secured borrowing via domestic prime brokerages; liability": [1.5, 1.5, 2.0, 1.5, 2.0],
         "Loans, other secured borrowing from domestic institutions; liability": [0.5, 0.5, 0.5, 0.5, 0.5],
         # Foreign borrowing components
-        "Security repurchase agreements with foreign institutions; liability":  [0.5, 0.5, 0.5, 0.5, 0.5],
-        "Loans, secured borrowing via foreign prime brokerages; liability":     [0.5, 1.0, 1.0, 1.0, 1.5],
-        "Loans, other secured borrowing from foreign institutions; liability":  [0.5, 0.5, 0.5, 0.5, 1.0],
+        "Security repurchase agreements with foreign institutions; liability": [0.5, 0.5, 0.5, 0.5, 0.5],
+        "Loans, secured borrowing via foreign prime brokerages; liability": [0.5, 1.0, 1.0, 1.0, 1.5],
+        "Loans, other secured borrowing from foreign institutions; liability": [0.5, 0.5, 0.5, 0.5, 1.0],
     }
     return pd.DataFrame(data, index=dates)
 

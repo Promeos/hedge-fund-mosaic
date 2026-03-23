@@ -2,6 +2,9 @@
 
 Open-source intelligence project reconstructing the U.S. hedge fund industry from 9 public regulatory data sources — balance sheets, derivatives, borrowing, positioning, fund-level holdings, trade-level swap data, and broker financials.
 
+# Custom Agents                                                                                                                 
+Before starting work, check `.claude/agents/` for available specialized agents and consider delegating tasks that match their descriptions. Invoke agents by name when the task fits.    
+
 ## Directory Structure
 
 ```
@@ -10,7 +13,7 @@ financial_data/
 ├── LICENSE                      # CC BY-SA 4.0
 ├── .claude/
 │   ├── settings.local.json      # Claude Code permissions
-│   ├── agents/                  # 13 specialized agent definitions
+│   ├── agents/                  # 16 specialized agent definitions
 │   │   ├── data-engineer.md     # Data pipeline agent (9 sources)
 │   │   ├── analyst.md           # Financial analysis agent
 │   │   ├── visualizer.md        # Charting agent (18 chart functions)
@@ -23,8 +26,11 @@ financial_data/
 │   │   ├── swaps-analyst.md     # CFTC Weekly Swaps specialist
 │   │   ├── dtcc-analyst.md      # DTCC trade-level data specialist
 │   │   ├── fcm-analyst.md       # FCM broker financials specialist
-│   │   └── cross-source-analyst.md  # Cross-source reconciliation
-│   └── commands/                # 10 slash commands
+│   │   ├── cross-source-analyst.md  # Cross-source reconciliation
+│   │   ├── pipeline-orchestrator.md # Pipeline status, freshness, orchestration
+│   │   ├── anomaly-detector.md  # Outlier detection, divergence alerts, risk scoring
+│   │   └── factor-analyst.md    # PCA, factor exposure, strategy clustering
+│   └── commands/                # 15 slash commands
 │       ├── refresh-data.md      # /refresh-data
 │       ├── run-analysis.md      # /run-analysis
 │       ├── validate-data.md     # /validate-data
@@ -35,7 +41,11 @@ financial_data/
 │       ├── parse-dtcc.md        # /parse-dtcc
 │       ├── parse-fcm.md         # /parse-fcm
 │       ├── cross-source-analysis.md  # /cross-source-analysis
-│       └── full-pipeline.md     # /full-pipeline
+│       ├── full-pipeline.md     # /full-pipeline
+│       ├── check-freshness.md   # /check-freshness
+│       ├── fetch-13f.md         # /fetch-13f
+│       ├── quick-stats.md       # /quick-stats
+│       └── compare-quarters.md  # /compare-quarters
 ├── .env                         # API keys (never commit)
 ├── requirements.txt             # Python dependencies
 ├── data/
@@ -138,7 +148,7 @@ pytest tests/
 - SEC EDGAR `User-Agent` header needs real contact email for production
 - All other data sources are publicly accessible without credentials
 
-## Agents (13)
+## Agents (16)
 
 | Agent | File | Purpose |
 |-------|------|---------|
@@ -155,8 +165,11 @@ pytest tests/
 | DTCC Analyst | `dtcc-analyst.md` | Trade-level OTC data, 110 columns, clearing/PB analysis |
 | FCM Analyst | `fcm-analyst.md` | Broker capital, customer segregation, concentration |
 | Cross-Source Analyst | `cross-source-analyst.md` | 9-source reconciliation, 9 hypothesis tests |
+| Pipeline Orchestrator | `pipeline-orchestrator.md` | Pipeline status, freshness audit, incremental fetch, dependency management |
+| Anomaly Detector | `anomaly-detector.md` | Z-score outliers, cross-source divergence, composite risk scoring |
+| Factor Analyst | `factor-analyst.md` | PCA decomposition, factor exposure, strategy clustering, leverage attribution |
 
-## Slash Commands (10)
+## Slash Commands (15)
 
 | Command | Purpose |
 |---------|---------|
@@ -171,6 +184,10 @@ pytest tests/
 | `/parse-fcm` | Parse FCM financials → 5 CSVs |
 | `/cross-source-analysis` | Cross-source reconciliation + hypothesis tests |
 | `/full-pipeline` | Run everything end-to-end |
+| `/check-freshness` | Audit data staleness across all 9 sources (read-only) |
+| `/fetch-13f` | Fetch current 13F holdings for all 8 tracked funds |
+| `/quick-stats` | Fast summary of latest metrics (console only) |
+| `/compare-quarters` | Quarter-over-quarter change analysis |
 
 ## Derived Metrics Reference
 

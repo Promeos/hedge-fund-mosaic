@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from src.analysis.metrics import (
     compute_correlation_matrix,
@@ -10,13 +9,12 @@ from src.analysis.metrics import (
     compute_leverage_stats,
 )
 
-
 # ---------------------------------------------------------------------------
 # compute_derived_metrics
 # ---------------------------------------------------------------------------
 
-class TestDerivedMetrics:
 
+class TestDerivedMetrics:
     def test_leverage_ratio(self, sample_balance_sheet):
         result = compute_derived_metrics(sample_balance_sheet)
         expected = sample_balance_sheet["Total liabilities"] / sample_balance_sheet["Total net assets"]
@@ -25,7 +23,9 @@ class TestDerivedMetrics:
     def test_cash_to_assets(self, sample_balance_sheet):
         result = compute_derived_metrics(sample_balance_sheet)
         df = sample_balance_sheet
-        cash = df["Deposits; asset"] + df["Other cash and cash equivalents; asset"] + df["Money market fund shares; asset"]
+        cash = (
+            df["Deposits; asset"] + df["Other cash and cash equivalents; asset"] + df["Money market fund shares; asset"]
+        )
         expected = cash / df["Total assets"]
         pd.testing.assert_series_equal(result["cash_to_assets"], expected, check_names=False)
 
@@ -81,8 +81,8 @@ class TestDerivedMetrics:
 # NaN handling (the fillna(0) fix)
 # ---------------------------------------------------------------------------
 
-class TestNaNHandling:
 
+class TestNaNHandling:
     def test_nan_total_assets_propagates_to_ratios(self, sample_balance_sheet_with_nans):
         """When Total assets is NaN, all asset-based ratios must be NaN."""
         result = compute_derived_metrics(sample_balance_sheet_with_nans)
@@ -106,8 +106,8 @@ class TestNaNHandling:
 # compute_leverage_stats
 # ---------------------------------------------------------------------------
 
-class TestLeverageStats:
 
+class TestLeverageStats:
     def test_returns_expected_keys(self, sample_balance_sheet):
         df = compute_derived_metrics(sample_balance_sheet)
         stats = compute_leverage_stats(df)
@@ -125,8 +125,8 @@ class TestLeverageStats:
 # compute_correlation_matrix
 # ---------------------------------------------------------------------------
 
-class TestCorrelationMatrix:
 
+class TestCorrelationMatrix:
     def test_shape_and_symmetry(self, sample_balance_sheet):
         corr = compute_correlation_matrix(sample_balance_sheet)
         assert corr.shape[0] == corr.shape[1]

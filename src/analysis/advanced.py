@@ -11,24 +11,25 @@ import warnings
 import numpy as np
 import pandas as pd
 from scipy import stats
-from statsmodels.tsa.stattools import adfuller, grangercausalitytests
 from statsmodels.tsa.api import VAR
+from statsmodels.tsa.stattools import grangercausalitytests
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
-PROCESSED = os.path.join(DATA_DIR, 'processed')
-RAW = os.path.join(DATA_DIR, 'raw')
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'outputs', 'reports')
-FIGURES_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'outputs', 'figures')
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+PROCESSED = os.path.join(DATA_DIR, "processed")
+RAW = os.path.join(DATA_DIR, "raw")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "reports")
+FIGURES_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "figures")
 
 
 def _quarter_str_to_timestamp(series):
-    return pd.PeriodIndex(series, freq='Q').to_timestamp('Q')
+    return pd.PeriodIndex(series, freq="Q").to_timestamp("Q")
 
 
 # ---------------------------------------------------------------------------
 # 1. Granger Causality Matrix
 # ---------------------------------------------------------------------------
+
 
 def granger_causality_matrix(aligned, variables=None, maxlag=4):
     """Pairwise Granger causality tests across multiple variables.
@@ -37,8 +38,12 @@ def granger_causality_matrix(aligned, variables=None, maxlag=4):
     """
     if variables is None:
         variables = [
-            'vix_mean', 'z1_leverage_ratio', 'pf_gav_nav_ratio',
-            'cot_lev_net', 'swap_ir_total', 'fcm_excess_net_capital',
+            "vix_mean",
+            "z1_leverage_ratio",
+            "pf_gav_nav_ratio",
+            "cot_lev_net",
+            "swap_ir_total",
+            "fcm_excess_net_capital",
         ]
 
     available = [v for v in variables if v in aligned.columns]
@@ -59,11 +64,11 @@ def granger_causality_matrix(aligned, variables=None, maxlag=4):
                 continue
             try:
                 with warnings.catch_warnings():
-                    warnings.simplefilter('ignore')
+                    warnings.simplefilter("ignore")
                     result = grangercausalitytests(data, maxlag=maxlag, verbose=False)
-                min_p = min(result[lag][0]['ssr_ftest'][1] for lag in result)
-                best_lag = min(result, key=lambda l: result[l][0]['ssr_ftest'][1])
-                f_stat = result[best_lag][0]['ssr_ftest'][0]
+                min_p = min(result[lag][0]["ssr_ftest"][1] for lag in result)
+                best_lag = min(result, key=lambda lag_k: result[lag_k][0]["ssr_ftest"][1])
+                f_stat = result[best_lag][0]["ssr_ftest"][0]
                 p_matrix.loc[cause, effect] = min_p
                 f_matrix.loc[cause, effect] = f_stat
             except Exception:
@@ -87,6 +92,7 @@ def granger_causality_matrix(aligned, variables=None, maxlag=4):
 # 2. Johansen Cointegration
 # ---------------------------------------------------------------------------
 
+
 def johansen_cointegration(aligned, variables=None, det_order=0, k_ar_diff=2):
     """Johansen cointegration test for multiple time series.
 
@@ -94,7 +100,7 @@ def johansen_cointegration(aligned, variables=None, det_order=0, k_ar_diff=2):
     cointegrating relationships.
     """
     if variables is None:
-        variables = ['z1_Total assets', 'pf_gav', 'pf_nav']
+        variables = ["z1_Total assets", "pf_gav", "pf_nav"]
 
     available = [v for v in variables if v in aligned.columns]
     if len(available) < 2:
@@ -114,37 +120,35 @@ def johansen_cointegration(aligned, variables=None, det_order=0, k_ar_diff=2):
     max_eigen_stats = result.lr2
     max_eigen_crit = result.cvm
 
-    n_coint_trace = sum(1 for i in range(len(trace_stats))
-                        if trace_stats[i] > trace_crit[i, 1])  # 95% column
-    n_coint_eigen = sum(1 for i in range(len(max_eigen_stats))
-                        if max_eigen_stats[i] > max_eigen_crit[i, 1])
+    n_coint_trace = sum(1 for i in range(len(trace_stats)) if trace_stats[i] > trace_crit[i, 1])  # 95% column
+    n_coint_eigen = sum(1 for i in range(len(max_eigen_stats)) if max_eigen_stats[i] > max_eigen_crit[i, 1])
 
-    print(f"\nJOHANSEN COINTEGRATION TEST")
+    print("\nJOHANSEN COINTEGRATION TEST")
     print(f"  Variables: {available}")
     print(f"  Observations: {len(data)}")
     print(f"  Trace test: {n_coint_trace} cointegrating relationship(s)")
     print(f"  Max eigenvalue test: {n_coint_eigen} cointegrating relationship(s)")
     for i in range(len(trace_stats)):
-        sig = '*' if trace_stats[i] > trace_crit[i, 1] else ''
-        print(f"    r<={i}: trace={trace_stats[i]:.2f}, "
-              f"95% crit={trace_crit[i, 1]:.2f} {sig}")
+        sig = "*" if trace_stats[i] > trace_crit[i, 1] else ""
+        print(f"    r<={i}: trace={trace_stats[i]:.2f}, 95% crit={trace_crit[i, 1]:.2f} {sig}")
 
     return {
-        'variables': available,
-        'n_obs': len(data),
-        'n_coint_trace': n_coint_trace,
-        'n_coint_eigen': n_coint_eigen,
-        'trace_stats': trace_stats.tolist(),
-        'trace_crit_95': trace_crit[:, 1].tolist(),
-        'max_eigen_stats': max_eigen_stats.tolist(),
-        'max_eigen_crit_95': max_eigen_crit[:, 1].tolist(),
-        'eigenvectors': result.evec.tolist(),
+        "variables": available,
+        "n_obs": len(data),
+        "n_coint_trace": n_coint_trace,
+        "n_coint_eigen": n_coint_eigen,
+        "trace_stats": trace_stats.tolist(),
+        "trace_crit_95": trace_crit[:, 1].tolist(),
+        "max_eigen_stats": max_eigen_stats.tolist(),
+        "max_eigen_crit_95": max_eigen_crit[:, 1].tolist(),
+        "eigenvectors": result.evec.tolist(),
     }
 
 
 # ---------------------------------------------------------------------------
 # 3. VAR Model + Impulse Response
 # ---------------------------------------------------------------------------
+
 
 def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
     """Fit VAR model and compute impulse response functions.
@@ -153,7 +157,7 @@ def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
     variance decomposition.
     """
     if variables is None:
-        variables = ['z1_leverage_ratio', 'pf_gav_nav_ratio', 'vix_mean', 'cot_lev_net']
+        variables = ["z1_leverage_ratio", "pf_gav_nav_ratio", "vix_mean", "cot_lev_net"]
 
     available = [v for v in variables if v in aligned.columns]
     if len(available) < 2:
@@ -231,15 +235,15 @@ def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
         print(f"    {var}: {', '.join(parts)}")
 
     return {
-        'variables': available,
-        'lag_order': best_lag,
-        'n_obs': len(data),
-        'aic': results.aic,
-        'bic': results.bic,
-        'irf_df': irf_df,
-        'fevd_df': fevd_df,
-        'means': means.to_dict(),
-        'stds': stds.to_dict(),
+        "variables": available,
+        "lag_order": best_lag,
+        "n_obs": len(data),
+        "aic": results.aic,
+        "bic": results.bic,
+        "irf_df": irf_df,
+        "fevd_df": fevd_df,
+        "means": means.to_dict(),
+        "stds": stds.to_dict(),
     }
 
 
@@ -247,7 +251,8 @@ def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
 # 4. Structural Break Detection
 # ---------------------------------------------------------------------------
 
-def detect_structural_breaks(series, name='series', max_breaks=3, min_segment=8):
+
+def detect_structural_breaks(series, name="series", max_breaks=3, min_segment=8):
     """Detect structural breaks using a CUSUM-based approach with
     iterative Chow-like splitting.
 
@@ -256,7 +261,7 @@ def detect_structural_breaks(series, name='series', max_breaks=3, min_segment=8)
     clean = series.dropna()
     if len(clean) < 2 * min_segment:
         print(f"Structural breaks ({name}): insufficient data ({len(clean)} obs)")
-        return {'name': name, 'breaks': [], 'segments': []}
+        return {"name": name, "breaks": [], "segments": []}
 
     def find_best_break(s):
         """Find the single best break point in a series using max F-stat."""
@@ -306,11 +311,15 @@ def detect_structural_breaks(series, name='series', max_breaks=3, min_segment=8)
         if best_break is None:
             break
 
-        breaks.append({
-            'index': best_break,
-            'date': str(clean.index[best_break].date()) if hasattr(clean.index[best_break], 'date') else str(clean.index[best_break]),
-            'f_stat': best_f,
-        })
+        breaks.append(
+            {
+                "index": best_break,
+                "date": str(clean.index[best_break].date())
+                if hasattr(clean.index[best_break], "date")
+                else str(clean.index[best_break]),
+                "f_stat": best_f,
+            }
+        )
 
         old_seg = segments.pop(best_seg_idx)
         segments.insert(best_seg_idx, (old_seg[0], best_break))
@@ -320,33 +329,36 @@ def detect_structural_breaks(series, name='series', max_breaks=3, min_segment=8)
     seg_stats = []
     for start, end in sorted(segments):
         seg = clean.iloc[start:end]
-        seg_stats.append({
-            'start': str(seg.index[0].date()) if hasattr(seg.index[0], 'date') else str(seg.index[0]),
-            'end': str(seg.index[-1].date()) if hasattr(seg.index[-1], 'date') else str(seg.index[-1]),
-            'n_obs': len(seg),
-            'mean': float(seg.mean()),
-            'std': float(seg.std()),
-            'min': float(seg.min()),
-            'max': float(seg.max()),
-        })
+        seg_stats.append(
+            {
+                "start": str(seg.index[0].date()) if hasattr(seg.index[0], "date") else str(seg.index[0]),
+                "end": str(seg.index[-1].date()) if hasattr(seg.index[-1], "date") else str(seg.index[-1]),
+                "n_obs": len(seg),
+                "mean": float(seg.mean()),
+                "std": float(seg.std()),
+                "min": float(seg.min()),
+                "max": float(seg.max()),
+            }
+        )
 
     print(f"\nSTRUCTURAL BREAKS: {name}")
     print(f"  Found {len(breaks)} significant break(s):")
     for b in breaks:
         print(f"    {b['date']} (F={b['f_stat']:.2f})")
     for seg in seg_stats:
-        print(f"  Segment {seg['start']} to {seg['end']}: "
-              f"mean={seg['mean']:.4f}, std={seg['std']:.4f}, n={seg['n_obs']}")
+        print(
+            f"  Segment {seg['start']} to {seg['end']}: mean={seg['mean']:.4f}, std={seg['std']:.4f}, n={seg['n_obs']}"
+        )
 
-    return {'name': name, 'breaks': breaks, 'segments': seg_stats}
+    return {"name": name, "breaks": breaks, "segments": seg_stats}
 
 
 # ---------------------------------------------------------------------------
 # 5. Monte Carlo Stress Testing
 # ---------------------------------------------------------------------------
 
-def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8,
-                            variables=None):
+
+def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8, variables=None):
     """Monte Carlo simulation of multi-variable paths using bootstrapped
     historical quarterly changes.
 
@@ -354,7 +366,7 @@ def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8,
     and probability of exceeding historical extremes.
     """
     if variables is None:
-        variables = ['z1_Total assets', 'z1_Total liabilities', 'z1_Total net assets']
+        variables = ["z1_Total assets", "z1_Total liabilities", "z1_Total net assets"]
 
     available = [v for v in variables if v in aligned.columns]
     if not available:
@@ -371,7 +383,6 @@ def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8,
     returns = returns.replace([np.inf, -np.inf], np.nan).dropna()
 
     current_values = data.iloc[-1]
-    n_vars = len(available)
 
     # Bootstrap: sample with replacement from historical returns
     rng = np.random.default_rng(42)
@@ -398,21 +409,18 @@ def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8,
         prob_worse_than_hist = (final_returns < hist_worst * n_quarters).mean()
 
         results[var] = {
-            'current_value': float(current_values[var]),
-            'paths': paths,
-            'final_returns': final_returns,
-            'var_95': float(var_95),
-            'var_99': float(var_99),
-            'cvar_95': float(cvar_95),
-            'cvar_99': float(cvar_99),
-            'median_return': float(np.median(final_returns)),
-            'mean_return': float(np.mean(final_returns)),
-            'prob_negative': float((final_returns < 0).mean()),
-            'prob_worse_than_hist_worst': float(prob_worse_than_hist),
-            'percentiles': {
-                p: float(np.percentile(final_values, p))
-                for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
-            },
+            "current_value": float(current_values[var]),
+            "paths": paths,
+            "final_returns": final_returns,
+            "var_95": float(var_95),
+            "var_99": float(var_99),
+            "cvar_95": float(cvar_95),
+            "cvar_99": float(cvar_99),
+            "median_return": float(np.median(final_returns)),
+            "mean_return": float(np.mean(final_returns)),
+            "prob_negative": float((final_returns < 0).mean()),
+            "prob_worse_than_hist_worst": float(prob_worse_than_hist),
+            "percentiles": {p: float(np.percentile(final_values, p)) for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]},
         }
 
     print(f"\nMONTE CARLO STRESS TEST ({n_simulations:,} simulations, {n_quarters}Q horizon)")
@@ -432,57 +440,61 @@ def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8,
 # 6. Form PF Liquidity Deep-Dive
 # ---------------------------------------------------------------------------
 
+
 def liquidity_deep_dive(sources):
     """Analyze Form PF liquidity mismatch dynamics across time horizons.
 
     Flags quarters with dangerous mismatches (investor can redeem faster
     than portfolio can liquidate).
     """
-    if 'form_pf_liquidity' not in sources:
+    if "form_pf_liquidity" not in sources:
         print("Liquidity deep-dive: missing form_pf_liquidity data")
         return {}
 
-    liq = sources['form_pf_liquidity'].copy()
+    liq = sources["form_pf_liquidity"].copy()
 
-    periods = ['At most 30 days', 'At most 90 days', 'At most 180 days']
-    types_needed = ['investor_liquidity', 'portfolio_liquidity']
+    periods = ["At most 30 days", "At most 90 days", "At most 180 days"]
+    types_needed = ["investor_liquidity", "portfolio_liquidity"]
 
     results = {}
     for period in periods:
         mismatches = []
         for ltype in types_needed:
-            subset = liq[(liq['liquidity_type'] == ltype) & (liq['period'] == period)].copy()
+            subset = liq[(liq["liquidity_type"] == ltype) & (liq["period"] == period)].copy()
             if subset.empty:
                 continue
-            subset['date'] = _quarter_str_to_timestamp(subset['quarter'])
-            subset = subset.set_index('date').sort_index()
-            results[f'{ltype}_{period}'] = subset['cumulative_pct']
-            mismatches.append(subset[['cumulative_pct']].rename(
-                columns={'cumulative_pct': ltype}))
+            subset["date"] = _quarter_str_to_timestamp(subset["quarter"])
+            subset = subset.set_index("date").sort_index()
+            results[f"{ltype}_{period}"] = subset["cumulative_pct"]
+            mismatches.append(subset[["cumulative_pct"]].rename(columns={"cumulative_pct": ltype}))
 
         if len(mismatches) == 2:
-            merged = mismatches[0].join(mismatches[1], how='inner')
-            merged['mismatch'] = merged['investor_liquidity'] - merged['portfolio_liquidity']
-            results[f'mismatch_{period}'] = merged
+            merged = mismatches[0].join(mismatches[1], how="inner")
+            merged["mismatch"] = merged["investor_liquidity"] - merged["portfolio_liquidity"]
+            results[f"mismatch_{period}"] = merged
 
     # Flag dangerous quarters (mismatch > 20%)
-    print(f"\nFORM PF LIQUIDITY DEEP-DIVE")
+    print("\nFORM PF LIQUIDITY DEEP-DIVE")
     for period in periods:
-        key = f'mismatch_{period}'
+        key = f"mismatch_{period}"
         if key in results:
             mm = results[key]
-            dangerous = mm[mm['mismatch'] > 0.20]
+            dangerous = mm[mm["mismatch"] > 0.20]
             print(f"\n  {period}:")
             print(f"    Mean mismatch: {mm['mismatch'].mean():.1%}")
-            print(f"    Max mismatch: {mm['mismatch'].max():.1%} "
-                  f"({mm['mismatch'].idxmax().date() if hasattr(mm['mismatch'].idxmax(), 'date') else mm['mismatch'].idxmax()})")
+            print(
+                f"    Max mismatch: {mm['mismatch'].max():.1%} "
+                f"({mm['mismatch'].idxmax().date() if hasattr(mm['mismatch'].idxmax(), 'date') else mm['mismatch'].idxmax()})"
+            )
             print(f"    Dangerous quarters (>20%): {len(dangerous)}")
             if not dangerous.empty:
                 for date, row in dangerous.iterrows():
-                    d = date.date() if hasattr(date, 'date') else date
-                    print(f"      {d}: investor={row['investor_liquidity']:.1%}, "
-                          f"portfolio={row['portfolio_liquidity']:.1%}, "
-                          f"gap={row['mismatch']:.1%}")
+                    d = date.date() if hasattr(date, "date") else date
+                    print(
+                        f"      {d}: investor={row['investor_liquidity']:.1%}, "
+                        f"portfolio={row['portfolio_liquidity']:.1%}, "
+                        f"gap={row['mismatch']:.1%}"
+                    )
 
     return results
 
@@ -491,66 +503,69 @@ def liquidity_deep_dive(sources):
 # 7. Strategy Rotation Analysis
 # ---------------------------------------------------------------------------
 
+
 def strategy_rotation_analysis(sources):
     """Analyze Form PF strategy allocation changes and compute HHI over time."""
-    if 'form_pf_strategy' not in sources:
+    if "form_pf_strategy" not in sources:
         print("Strategy rotation: missing form_pf_strategy data")
         return {}
 
-    strat = sources['form_pf_strategy'].copy()
-    if 'quarter' not in strat.columns or 'nav' not in strat.columns:
+    strat = sources["form_pf_strategy"].copy()
+    if "quarter" not in strat.columns or "nav" not in strat.columns:
         print("Strategy rotation: missing required columns")
         return {}
 
-    strat['date'] = _quarter_str_to_timestamp(strat['quarter'])
+    strat["date"] = _quarter_str_to_timestamp(strat["quarter"])
 
     # Compute HHI per quarter
     hhi_rows = []
-    for quarter, grp in strat.groupby('quarter'):
-        total_nav = grp['nav'].sum()
+    for quarter, grp in strat.groupby("quarter"):
+        total_nav = grp["nav"].sum()
         if total_nav > 0:
-            shares = grp['nav'] / total_nav
-            hhi = (shares ** 2).sum()
-            top_strategy = grp.loc[grp['nav'].idxmax(), 'strategy']
-            top_share = grp['nav'].max() / total_nav
-            hhi_rows.append({
-                'quarter': quarter,
-                'date': _quarter_str_to_timestamp(pd.Series([quarter])).values[0],
-                'hhi': hhi,
-                'n_strategies': len(grp),
-                'top_strategy': top_strategy,
-                'top_share': top_share,
-                'total_nav': total_nav,
-            })
+            shares = grp["nav"] / total_nav
+            hhi = (shares**2).sum()
+            top_strategy = grp.loc[grp["nav"].idxmax(), "strategy"]
+            top_share = grp["nav"].max() / total_nav
+            hhi_rows.append(
+                {
+                    "quarter": quarter,
+                    "date": _quarter_str_to_timestamp(pd.Series([quarter])).values[0],
+                    "hhi": hhi,
+                    "n_strategies": len(grp),
+                    "top_strategy": top_strategy,
+                    "top_share": top_share,
+                    "total_nav": total_nav,
+                }
+            )
 
     if not hhi_rows:
         return {}
 
-    hhi_df = pd.DataFrame(hhi_rows).sort_values('date')
+    hhi_df = pd.DataFrame(hhi_rows).sort_values("date")
 
     # Trend test on HHI
-    tau, p_val = stats.kendalltau(np.arange(len(hhi_df)), hhi_df['hhi'].values)
+    tau, p_val = stats.kendalltau(np.arange(len(hhi_df)), hhi_df["hhi"].values)
 
     # Biggest quarter-over-quarter shifts
-    hhi_df['hhi_change'] = hhi_df['hhi'].diff()
-    biggest_shifts = hhi_df.nlargest(5, 'hhi_change', keep='first')
+    hhi_df["hhi_change"] = hhi_df["hhi"].diff()
+    biggest_shifts = hhi_df.nlargest(5, "hhi_change", keep="first")
 
-    print(f"\nSTRATEGY ROTATION ANALYSIS")
+    print("\nSTRATEGY ROTATION ANALYSIS")
     print(f"  Quarters: {len(hhi_df)}")
     print(f"  HHI range: {hhi_df['hhi'].min():.4f} to {hhi_df['hhi'].max():.4f}")
-    print(f"  HHI trend: tau={tau:.3f}, p={p_val:.4f} "
-          f"({'diversifying' if tau < 0 else 'concentrating'})")
-    print(f"  Current top strategy: {hhi_df.iloc[-1]['top_strategy']} "
-          f"({hhi_df.iloc[-1]['top_share']:.1%} of NAV)")
-    print(f"\n  Biggest concentration shifts:")
+    print(f"  HHI trend: tau={tau:.3f}, p={p_val:.4f} ({'diversifying' if tau < 0 else 'concentrating'})")
+    print(f"  Current top strategy: {hhi_df.iloc[-1]['top_strategy']} ({hhi_df.iloc[-1]['top_share']:.1%} of NAV)")
+    print("\n  Biggest concentration shifts:")
     for _, row in biggest_shifts.iterrows():
-        print(f"    {row['quarter']}: HHI change={row['hhi_change']:+.4f}, "
-              f"top={row['top_strategy']} ({row['top_share']:.1%})")
+        print(
+            f"    {row['quarter']}: HHI change={row['hhi_change']:+.4f}, "
+            f"top={row['top_strategy']} ({row['top_share']:.1%})"
+        )
 
     return {
-        'hhi_df': hhi_df,
-        'trend_tau': tau,
-        'trend_p': p_val,
+        "hhi_df": hhi_df,
+        "trend_tau": tau,
+        "trend_p": p_val,
     }
 
 
@@ -558,43 +573,44 @@ def strategy_rotation_analysis(sources):
 # 8. FCM Concentration Trend Analysis
 # ---------------------------------------------------------------------------
 
+
 def fcm_concentration_analysis(sources):
     """Analyze FCM market concentration trends — HHI, top-5 share, Gini."""
-    if 'fcm_concentration' not in sources:
+    if "fcm_concentration" not in sources:
         print("FCM concentration: missing data")
         return {}
 
-    conc = sources['fcm_concentration'].copy()
-    if 'as_of_date' in conc.columns:
-        conc['date'] = pd.to_datetime(conc['as_of_date'])
-    elif 'date' in conc.columns:
-        conc['date'] = pd.to_datetime(conc['date'])
+    conc = sources["fcm_concentration"].copy()
+    if "as_of_date" in conc.columns:
+        conc["date"] = pd.to_datetime(conc["as_of_date"])
+    elif "date" in conc.columns:
+        conc["date"] = pd.to_datetime(conc["date"])
     else:
         print("FCM concentration: no date column found")
         return {}
 
-    conc = conc.sort_values('date')
+    conc = conc.sort_values("date")
 
     # Trend tests
-    tau_hhi, p_hhi = stats.kendalltau(np.arange(len(conc)), conc['hhi'].values)
-    tau_top5, p_top5 = stats.kendalltau(np.arange(len(conc)), conc['top5_share'].values)
+    tau_hhi, p_hhi = stats.kendalltau(np.arange(len(conc)), conc["hhi"].values)
+    tau_top5, p_top5 = stats.kendalltau(np.arange(len(conc)), conc["top5_share"].values)
 
     # Structural break in HHI
-    breaks = detect_structural_breaks(
-        conc.set_index('date')['hhi'], name='FCM HHI', min_segment=6)
+    breaks = detect_structural_breaks(conc.set_index("date")["hhi"], name="FCM HHI", min_segment=6)
 
-    print(f"\nFCM CONCENTRATION TRENDS")
+    print("\nFCM CONCENTRATION TRENDS")
     print(f"  Months: {len(conc)} ({conc['date'].min().date()} to {conc['date'].max().date()})")
-    print(f"  HHI: {conc['hhi'].iloc[0]:.4f} -> {conc['hhi'].iloc[-1]:.4f} "
-          f"(trend tau={tau_hhi:.3f}, p={p_hhi:.4f})")
-    print(f"  Top-5 share: {conc['top5_share'].iloc[0]:.1%} -> {conc['top5_share'].iloc[-1]:.1%} "
-          f"(trend tau={tau_top5:.3f}, p={p_top5:.4f})")
+    print(f"  HHI: {conc['hhi'].iloc[0]:.4f} -> {conc['hhi'].iloc[-1]:.4f} (trend tau={tau_hhi:.3f}, p={p_hhi:.4f})")
+    print(
+        f"  Top-5 share: {conc['top5_share'].iloc[0]:.1%} -> {conc['top5_share'].iloc[-1]:.1%} "
+        f"(trend tau={tau_top5:.3f}, p={p_top5:.4f})"
+    )
 
     return {
-        'data': conc,
-        'hhi_trend': {'tau': tau_hhi, 'p': p_hhi},
-        'top5_trend': {'tau': tau_top5, 'p': p_top5},
-        'breaks': breaks,
+        "data": conc,
+        "hhi_trend": {"tau": tau_hhi, "p": p_hhi},
+        "top5_trend": {"tau": tau_top5, "p": p_top5},
+        "breaks": breaks,
     }
 
 
@@ -602,75 +618,86 @@ def fcm_concentration_analysis(sources):
 # 9. 13F Holdings Concentration
 # ---------------------------------------------------------------------------
 
+
 def thirteenf_concentration(sources):
     """Analyze 13F equity holdings concentration across top funds."""
-    path_13f = os.path.join(RAW, '13f_all_holdings.csv')
+    path_13f = os.path.join(RAW, "13f_all_holdings.csv")
     if not os.path.exists(path_13f):
         print("13F concentration: file not found")
         return {}
 
     holdings = pd.read_csv(path_13f)
-    if 'value_thousands' not in holdings.columns:
+    if "value_thousands" not in holdings.columns:
         print("13F concentration: missing value_thousands column")
         return {}
 
-    holdings['value'] = holdings['value_thousands'] * 1000  # to USD
+    holdings["value"] = holdings["value_thousands"] * 1000  # to USD
 
     # Per-fund concentration (HHI of issuers within each fund)
     fund_hhi = []
-    for (fund, date), grp in holdings.groupby(['fund', 'filing_date']):
-        total = grp['value'].sum()
+    for (fund, date), grp in holdings.groupby(["fund", "filing_date"]):
+        total = grp["value"].sum()
         if total > 0:
-            shares = grp['value'] / total
-            hhi = (shares ** 2).sum()
-            top_holding = grp.loc[grp['value'].idxmax(), 'issuer']
-            top_pct = grp['value'].max() / total
-            fund_hhi.append({
-                'fund': fund, 'filing_date': date,
-                'hhi': hhi, 'n_positions': len(grp),
-                'top_holding': top_holding, 'top_pct': top_pct,
-                'total_value': total,
-            })
+            shares = grp["value"] / total
+            hhi = (shares**2).sum()
+            top_holding = grp.loc[grp["value"].idxmax(), "issuer"]
+            top_pct = grp["value"].max() / total
+            fund_hhi.append(
+                {
+                    "fund": fund,
+                    "filing_date": date,
+                    "hhi": hhi,
+                    "n_positions": len(grp),
+                    "top_holding": top_holding,
+                    "top_pct": top_pct,
+                    "total_value": total,
+                }
+            )
 
     if not fund_hhi:
         return {}
 
     hhi_df = pd.DataFrame(fund_hhi)
-    hhi_df['filing_date'] = pd.to_datetime(hhi_df['filing_date'])
+    hhi_df["filing_date"] = pd.to_datetime(hhi_df["filing_date"])
 
     # Cross-fund overlap: which issuers appear in the most portfolios?
-    latest_date = hhi_df['filing_date'].max()
-    latest = holdings[holdings['filing_date'] == str(latest_date.date())].copy()
+    latest_date = hhi_df["filing_date"].max()
+    latest = holdings[holdings["filing_date"] == str(latest_date.date())].copy()
     if latest.empty:
-        latest = holdings[holdings['filing_date'] == holdings['filing_date'].max()]
+        latest = holdings[holdings["filing_date"] == holdings["filing_date"].max()]
 
-    issuer_counts = latest.groupby('issuer').agg(
-        n_funds=('fund', 'nunique'),
-        total_value=('value', 'sum'),
-    ).sort_values('n_funds', ascending=False)
+    issuer_counts = (
+        latest.groupby("issuer")
+        .agg(
+            n_funds=("fund", "nunique"),
+            total_value=("value", "sum"),
+        )
+        .sort_values("n_funds", ascending=False)
+    )
 
-    overlap = issuer_counts[issuer_counts['n_funds'] > 1].head(20)
+    overlap = issuer_counts[issuer_counts["n_funds"] > 1].head(20)
 
-    print(f"\n13F HOLDINGS CONCENTRATION")
+    print("\n13F HOLDINGS CONCENTRATION")
     print(f"  Funds: {hhi_df['fund'].nunique()}")
     print(f"  Filings: {len(hhi_df)}")
 
     # Per-fund summary at latest date
-    latest_hhi = hhi_df[hhi_df['filing_date'] == hhi_df['filing_date'].max()]
+    latest_hhi = hhi_df[hhi_df["filing_date"] == hhi_df["filing_date"].max()]
     for _, row in latest_hhi.iterrows():
-        print(f"  {row['fund']}: HHI={row['hhi']:.4f}, "
-              f"{row['n_positions']} positions, "
-              f"top={row['top_holding'][:30]} ({row['top_pct']:.1%})")
+        print(
+            f"  {row['fund']}: HHI={row['hhi']:.4f}, "
+            f"{row['n_positions']} positions, "
+            f"top={row['top_holding'][:30]} ({row['top_pct']:.1%})"
+        )
 
     if not overlap.empty:
         print(f"\n  Most commonly held (across {latest['fund'].nunique()} funds):")
         for issuer, row in overlap.head(10).iterrows():
-            print(f"    {issuer[:40]}: {row['n_funds']} funds, "
-                  f"${row['total_value']/1e6:.0f}M")
+            print(f"    {issuer[:40]}: {row['n_funds']} funds, ${row['total_value'] / 1e6:.0f}M")
 
     return {
-        'fund_hhi': hhi_df,
-        'overlap': overlap,
+        "fund_hhi": hhi_df,
+        "overlap": overlap,
     }
 
 
@@ -678,9 +705,10 @@ def thirteenf_concentration(sources):
 # Master orchestrator
 # ---------------------------------------------------------------------------
 
+
 def run_all_advanced(save=True):
     """Run all advanced analyses and save results."""
-    from src.analysis.cross_source import load_all_sources, align_quarterly
+    from src.analysis.cross_source import align_quarterly, load_all_sources
 
     print("=" * 80)
     print("ADVANCED STATISTICAL ANALYSIS")
@@ -695,62 +723,63 @@ def run_all_advanced(save=True):
     # 1. Granger causality matrix
     print("\n" + "=" * 80)
     granger_p = granger_causality_matrix(aligned)
-    all_results['granger'] = granger_p
+    all_results["granger"] = granger_p
 
     # 2. Johansen cointegration
     print("\n" + "=" * 80)
     johansen = johansen_cointegration(aligned)
-    all_results['johansen'] = johansen
+    all_results["johansen"] = johansen
 
     # Also test Form PF GAV vs CFTC swap notional
     johansen_swaps = johansen_cointegration(
-        aligned, variables=['pf_gav', 'swap_ir_total', 'swap_credit_total'],
+        aligned,
+        variables=["pf_gav", "swap_ir_total", "swap_credit_total"],
     )
-    all_results['johansen_swaps'] = johansen_swaps
+    all_results["johansen_swaps"] = johansen_swaps
 
     # 3. VAR impulse response
     print("\n" + "=" * 80)
     var_result = var_impulse_response(aligned)
-    all_results['var'] = var_result
+    all_results["var"] = var_result
 
     # 4. Structural breaks
     print("\n" + "=" * 80)
     break_series = {
-        'z1_leverage_ratio': 'Z.1 Leverage Ratio',
-        'pf_gav_nav_ratio': 'Form PF GAV/NAV',
-        'swap_ir_cleared_pct': 'IR Swap Clearing Rate',
-        'vix_mean': 'VIX Mean',
+        "z1_leverage_ratio": "Z.1 Leverage Ratio",
+        "pf_gav_nav_ratio": "Form PF GAV/NAV",
+        "swap_ir_cleared_pct": "IR Swap Clearing Rate",
+        "vix_mean": "VIX Mean",
     }
     all_breaks = {}
     for col, name in break_series.items():
         if col in aligned.columns:
             all_breaks[col] = detect_structural_breaks(aligned[col], name=name)
-    all_results['structural_breaks'] = all_breaks
+    all_results["structural_breaks"] = all_breaks
 
     # 5. Monte Carlo
     print("\n" + "=" * 80)
     mc = monte_carlo_stress_test(aligned)
-    all_results['monte_carlo'] = mc
+    all_results["monte_carlo"] = mc
 
     # 6. Form PF liquidity deep-dive
     print("\n" + "=" * 80)
     liquidity = liquidity_deep_dive(sources)
-    all_results['liquidity'] = liquidity
+    all_results["liquidity"] = liquidity
 
     # 7. Strategy rotation
     print("\n" + "=" * 80)
     strategy = strategy_rotation_analysis(sources)
-    all_results['strategy_rotation'] = strategy
+    all_results["strategy_rotation"] = strategy
 
     # 8. FCM concentration
     print("\n" + "=" * 80)
     fcm_conc = fcm_concentration_analysis(sources)
-    all_results['fcm_concentration'] = fcm_conc
+    all_results["fcm_concentration"] = fcm_conc
 
     # 9. 13F concentration
     print("\n" + "=" * 80)
     thirteenf = thirteenf_concentration(sources)
-    all_results['thirteenf'] = thirteenf
+    all_results["thirteenf"] = thirteenf
 
     # Save results
     if save:
@@ -758,34 +787,34 @@ def run_all_advanced(save=True):
 
         # Granger matrix
         if not granger_p.empty:
-            granger_p.to_csv(os.path.join(OUTPUT_DIR, 'granger_causality_matrix.csv'))
+            granger_p.to_csv(os.path.join(OUTPUT_DIR, "granger_causality_matrix.csv"))
 
         # VAR IRF
-        if 'irf_df' in var_result:
-            var_result['irf_df'].to_csv(os.path.join(OUTPUT_DIR, 'var_impulse_response.csv'))
-            var_result['fevd_df'].to_csv(os.path.join(OUTPUT_DIR, 'var_fevd.csv'))
+        if "irf_df" in var_result:
+            var_result["irf_df"].to_csv(os.path.join(OUTPUT_DIR, "var_impulse_response.csv"))
+            var_result["fevd_df"].to_csv(os.path.join(OUTPUT_DIR, "var_fevd.csv"))
 
         # Strategy HHI
-        if 'hhi_df' in strategy:
-            strategy['hhi_df'].to_csv(
-                os.path.join(OUTPUT_DIR, 'strategy_rotation_hhi.csv'), index=False)
+        if "hhi_df" in strategy:
+            strategy["hhi_df"].to_csv(os.path.join(OUTPUT_DIR, "strategy_rotation_hhi.csv"), index=False)
 
         # Monte Carlo summary
         if mc:
             mc_summary = []
             for var, r in mc.items():
-                mc_summary.append({
-                    'variable': var,
-                    'current': r['current_value'],
-                    'var_95': r['var_95'],
-                    'cvar_95': r['cvar_95'],
-                    'var_99': r['var_99'],
-                    'cvar_99': r['cvar_99'],
-                    'median_return': r['median_return'],
-                    'prob_negative': r['prob_negative'],
-                })
-            pd.DataFrame(mc_summary).to_csv(
-                os.path.join(OUTPUT_DIR, 'monte_carlo_summary.csv'), index=False)
+                mc_summary.append(
+                    {
+                        "variable": var,
+                        "current": r["current_value"],
+                        "var_95": r["var_95"],
+                        "cvar_95": r["cvar_95"],
+                        "var_99": r["var_99"],
+                        "cvar_99": r["cvar_99"],
+                        "median_return": r["median_return"],
+                        "prob_negative": r["prob_negative"],
+                    }
+                )
+            pd.DataFrame(mc_summary).to_csv(os.path.join(OUTPUT_DIR, "monte_carlo_summary.csv"), index=False)
 
         print(f"\nResults saved to {OUTPUT_DIR}")
 
@@ -798,7 +827,7 @@ def run_all_advanced(save=True):
 def _write_report(results):
     """Write a comprehensive text report of all advanced analysis results."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    report_path = os.path.join(OUTPUT_DIR, 'advanced_analysis.txt')
+    report_path = os.path.join(OUTPUT_DIR, "advanced_analysis.txt")
 
     lines = []
     lines.append("=" * 80)
@@ -807,7 +836,7 @@ def _write_report(results):
     lines.append("=" * 80)
 
     # Granger
-    granger = results.get('granger')
+    granger = results.get("granger")
     if granger is not None and not granger.empty:
         lines.append("\n\n1. GRANGER CAUSALITY MATRIX")
         lines.append("-" * 40)
@@ -819,7 +848,7 @@ def _write_report(results):
                     lines.append(f"  {cause} -> {effect}: p={p:.4f}")
 
     # Johansen
-    johansen = results.get('johansen', {})
+    johansen = results.get("johansen", {})
     if johansen:
         lines.append("\n\n2. JOHANSEN COINTEGRATION")
         lines.append("-" * 40)
@@ -828,7 +857,7 @@ def _write_report(results):
         lines.append(f"Cointegrating relationships (max eigenvalue): {johansen.get('n_coint_eigen', 0)}")
 
     # VAR
-    var = results.get('var', {})
+    var = results.get("var", {})
     if var:
         lines.append("\n\n3. VAR MODEL & IMPULSE RESPONSE")
         lines.append("-" * 40)
@@ -837,23 +866,24 @@ def _write_report(results):
         lines.append(f"AIC: {var.get('aic', 'N/A'):.2f}")
 
     # Structural breaks
-    breaks = results.get('structural_breaks', {})
+    breaks = results.get("structural_breaks", {})
     if breaks:
         lines.append("\n\n4. STRUCTURAL BREAKS")
         lines.append("-" * 40)
         for col, b in breaks.items():
             lines.append(f"\n  {b['name']}:")
-            if b['breaks']:
-                for br in b['breaks']:
+            if b["breaks"]:
+                for br in b["breaks"]:
                     lines.append(f"    Break at {br['date']} (F={br['f_stat']:.2f})")
             else:
                 lines.append("    No significant breaks detected")
-            for seg in b['segments']:
-                lines.append(f"    Segment {seg['start']} to {seg['end']}: "
-                             f"mean={seg['mean']:.4f}, std={seg['std']:.4f}")
+            for seg in b["segments"]:
+                lines.append(
+                    f"    Segment {seg['start']} to {seg['end']}: mean={seg['mean']:.4f}, std={seg['std']:.4f}"
+                )
 
     # Monte Carlo
-    mc = results.get('monte_carlo', {})
+    mc = results.get("monte_carlo", {})
     if mc:
         lines.append("\n\n5. MONTE CARLO STRESS TEST (10,000 simulations, 8Q horizon)")
         lines.append("-" * 40)
@@ -864,47 +894,47 @@ def _write_report(results):
             lines.append(f"    CVaR 95%: {r['cvar_95']:+.1%}")
             lines.append(f"    VaR 99%: {r['var_99']:+.1%}")
             lines.append(f"    P(negative): {r['prob_negative']:.1%}")
-            lines.append(f"    Percentiles of final value ($B):")
-            for p, v in r['percentiles'].items():
+            lines.append("    Percentiles of final value ($B):")
+            for p, v in r["percentiles"].items():
                 lines.append(f"      {p}th: ${v:.1f}B")
 
     # Liquidity
-    liq = results.get('liquidity', {})
+    liq = results.get("liquidity", {})
     if liq:
         lines.append("\n\n6. FORM PF LIQUIDITY MISMATCH")
         lines.append("-" * 40)
         for key, val in liq.items():
-            if key.startswith('mismatch_') and isinstance(val, pd.DataFrame):
-                period = key.replace('mismatch_', '')
+            if key.startswith("mismatch_") and isinstance(val, pd.DataFrame):
+                period = key.replace("mismatch_", "")
                 lines.append(f"\n  {period}:")
                 lines.append(f"    Mean mismatch: {val['mismatch'].mean():.1%}")
                 lines.append(f"    Max mismatch: {val['mismatch'].max():.1%}")
-                dangerous = val[val['mismatch'] > 0.20]
+                dangerous = val[val["mismatch"] > 0.20]
                 lines.append(f"    Dangerous quarters (>20%): {len(dangerous)}")
 
     # Strategy rotation
-    strat = results.get('strategy_rotation', {})
-    if strat and 'hhi_df' in strat:
+    strat = results.get("strategy_rotation", {})
+    if strat and "hhi_df" in strat:
         lines.append("\n\n7. STRATEGY ROTATION")
         lines.append("-" * 40)
-        hhi_df = strat['hhi_df']
+        hhi_df = strat["hhi_df"]
         lines.append(f"  HHI trend: tau={strat['trend_tau']:.3f}, p={strat['trend_p']:.4f}")
         lines.append(f"  HHI range: {hhi_df['hhi'].min():.4f} to {hhi_df['hhi'].max():.4f}")
 
     # FCM concentration
-    fcm = results.get('fcm_concentration', {})
-    if fcm and 'hhi_trend' in fcm:
+    fcm = results.get("fcm_concentration", {})
+    if fcm and "hhi_trend" in fcm:
         lines.append("\n\n8. FCM CONCENTRATION")
         lines.append("-" * 40)
         lines.append(f"  HHI trend: tau={fcm['hhi_trend']['tau']:.3f}, p={fcm['hhi_trend']['p']:.4f}")
         lines.append(f"  Top-5 trend: tau={fcm['top5_trend']['tau']:.3f}, p={fcm['top5_trend']['p']:.4f}")
 
     # 13F
-    thirteenf = results.get('thirteenf', {})
-    if thirteenf and 'fund_hhi' in thirteenf:
+    thirteenf = results.get("thirteenf", {})
+    if thirteenf and "fund_hhi" in thirteenf:
         lines.append("\n\n9. 13F HOLDINGS CONCENTRATION")
         lines.append("-" * 40)
-        hhi_df = thirteenf['fund_hhi']
+        hhi_df = thirteenf["fund_hhi"]
         lines.append(f"  Funds tracked: {hhi_df['fund'].nunique()}")
         lines.append(f"  Total filings: {len(hhi_df)}")
 
@@ -912,11 +942,11 @@ def _write_report(results):
     lines.append("END OF REPORT")
     lines.append("=" * 80)
 
-    report = '\n'.join(lines)
-    with open(report_path, 'w') as f:
+    report = "\n".join(lines)
+    with open(report_path, "w") as f:
         f.write(report)
     print(f"\nReport saved to {report_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_all_advanced(save=True)

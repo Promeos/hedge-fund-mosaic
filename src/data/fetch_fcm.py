@@ -9,18 +9,19 @@ Data available: January 2022 – present (monthly).
 Reports are uploaded ~2 months after the data month.
 """
 
+import calendar
 import os
 import time
-import calendar
+
 import requests
 
-SAVE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw', 'fcm')
+SAVE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "fcm")
 
 BASE = "https://www.cftc.gov/sites/default/files"
 
 HEADERS = {
-    'User-Agent': 'HedgeFundIndustryAnalysis admin@financialresearch.dev',
-    'Accept': '*/*',
+    "User-Agent": "HedgeFundIndustryAnalysis admin@financialresearch.dev",
+    "Accept": "*/*",
 }
 
 # CFTC uses inconsistent filename formats across years
@@ -31,8 +32,23 @@ FILENAME_PATTERNS = [
 ]
 
 
-def generate_report_months(start_year=2022, start_month=1, end_year=2026, end_month=1):
-    """Generate (data_year, data_month, upload_year, upload_month) tuples."""
+def generate_report_months(start_year=2022, start_month=1, end_year=None, end_month=None):
+    """Generate (data_year, data_month, upload_year, upload_month) tuples.
+
+    Defaults to current month minus 2 (reports lag by ~2 months).
+    """
+    if end_year is None or end_month is None:
+        from datetime import datetime
+
+        now = datetime.now()
+        # Reports lag by ~2 months; estimate latest available data month
+        lag_month = now.month - 2
+        if lag_month < 1:
+            end_year = now.year - 1
+            end_month = lag_month + 12
+        else:
+            end_year = now.year
+            end_month = lag_month
     months = []
     year, month = start_year, start_month
     while (year, month) <= (end_year, end_month):
@@ -65,8 +81,8 @@ def download_report(data_year, data_month, upload_year, upload_month, save_dir):
         try:
             resp = requests.get(url, headers=HEADERS, timeout=30)
             if resp.status_code == 200 and len(resp.content) > 1000:
-                if resp.content[:4] == b'PK\x03\x04':
-                    with open(filepath, 'wb') as f:
+                if resp.content[:4] == b"PK\x03\x04":
+                    with open(filepath, "wb") as f:
                         f.write(resp.content)
                     return "downloaded"
         except requests.RequestException:
@@ -89,8 +105,8 @@ def download_report(data_year, data_month, upload_year, upload_month, save_dir):
             try:
                 resp = requests.get(url, headers=HEADERS, timeout=30)
                 if resp.status_code == 200 and len(resp.content) > 1000:
-                    if resp.content[:4] == b'PK\x03\x04':
-                        with open(filepath, 'wb') as f:
+                    if resp.content[:4] == b"PK\x03\x04":
+                        with open(filepath, "wb") as f:
                             f.write(resp.content)
                         return "downloaded"
             except requests.RequestException:
@@ -115,13 +131,13 @@ def fetch_all_fcm_reports():
 
         month_name = calendar.month_name[dm]
         if result == "downloaded":
-            print(f"  [{i+1}/{len(months)}] Downloaded {month_name} {dy}")
+            print(f"  [{i + 1}/{len(months)}] Downloaded {month_name} {dy}")
             time.sleep(0.3)
         elif result == "failed":
             failed_months.append(f"{month_name} {dy}")
 
     print(f"\nDone! Downloaded: {stats['downloaded']}, Cached: {stats['cached']}, Failed: {stats['failed']}")
-    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith('.xlsx')])
+    total_files = len([f for f in os.listdir(SAVE_DIR) if f.endswith(".xlsx")])
     print(f"Files in {SAVE_DIR}: {total_files}")
 
     if failed_months:
@@ -130,5 +146,5 @@ def fetch_all_fcm_reports():
             print(f"  {m}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch_all_fcm_reports()

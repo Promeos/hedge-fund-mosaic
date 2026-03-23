@@ -1,14 +1,23 @@
-"""Data fetching functions for all external sources."""
+"""Data fetching functions for all external sources.
 
+Fetches and caches data from 5 sources:
+- Federal Reserve FRED (Z.1 balance sheet, VIX)
+- SEC EDGAR (13F holdings, Form ADV submissions)
+- CFTC Commitments of Traders (equity index futures positioning)
+
+All data is cached to data/raw/ to avoid redundant API calls.
+Rate limits: 0.2s FRED, 0.15s SEC EDGAR.
+"""
+
+import json
 import os
 import time
-import json
-import requests
 import xml.etree.ElementTree as ET
-from io import StringIO
+import zipfile
+from io import BytesIO
 
-import numpy as np
 import pandas as pd
+import requests
 from dotenv import load_dotenv
 
 try:
@@ -78,6 +87,7 @@ HEDGE_FUND_CIKS = {
 # FRED — Hedge Fund Balance Sheet
 # ---------------------------------------------------------------------------
 
+
 def fetch_hedge_fund_data(fred_client, series_map, cache_path=None):
     """Fetch all hedge fund balance sheet series from FRED and combine into a DataFrame."""
     if cache_path and os.path.exists(cache_path):
@@ -120,6 +130,7 @@ def fetch_hedge_fund_data(fred_client, series_map, cache_path=None):
 # FRED — VIX Volatility Index
 # ---------------------------------------------------------------------------
 
+
 def fetch_vix_data(fred_client, cache_path=None):
     """Fetch VIX daily data from FRED, aggregate to quarterly."""
     if cache_path and os.path.exists(cache_path):
@@ -128,16 +139,14 @@ def fetch_vix_data(fred_client, cache_path=None):
         return df
 
     print("Fetching VIX data from FRED (VIXCLS)...")
-    vix = fred_client.get_series('VIXCLS')
+    vix = fred_client.get_series("VIXCLS")
     vix = vix.dropna()
 
-    df = vix.resample('QE').agg(
-        VIX_mean='mean',
-        VIX_max='max',
-        VIX_min='min',
-        VIX_end='last',
-        VIX_std='std'
-    ).rename_axis("Date")
+    df = (
+        vix.resample("QE")
+        .agg(VIX_mean="mean", VIX_max="max", VIX_min="min", VIX_end="last", VIX_std="std")
+        .rename_axis("Date")
+    )
 
     if cache_path:
         df.to_csv(cache_path)
@@ -151,24 +160,28 @@ def fetch_vix_data(fred_client, cache_path=None):
 # SEC EDGAR — 13F Holdings
 # ---------------------------------------------------------------------------
 
-def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
-                       start_date="2020-10-01", end_date="2021-06-30"):
+
+def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, end_date=None):
     """Fetch 13F-HR filing data from SEC EDGAR for a given fund.
 
     Args:
         start_date: Earliest filing date to fetch holdings for (inclusive).
+                    Defaults to 2 years ago.
         end_date: Latest filing date to fetch holdings for (inclusive).
+                  Defaults to today.
     """
+    if end_date is None:
+        end_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+    if start_date is None:
+        start_date = (pd.Timestamp.now() - pd.DateOffset(years=2)).strftime("%Y-%m-%d")
     # Cache key includes date window so different queries don't collide
-    start_tag = start_date.replace('-', '')
-    end_tag = end_date.replace('-', '')
-    cache_path = os.path.join(
-        cache_dir,
-        f"13f_{fund_name.replace(' ', '_').lower()}_{start_tag}_{end_tag}.csv")
+    start_tag = start_date.replace("-", "")
+    end_tag = end_date.replace("-", "")
+    cache_path = os.path.join(cache_dir, f"13f_{fund_name.replace(' ', '_').lower()}_{start_tag}_{end_tag}.csv")
     if os.path.exists(cache_path):
         df_cached = pd.read_csv(cache_path)
         # Only use cache if it contains actual holdings data
-        if 'value_thousands' in df_cached.columns:
+        if "value_thousands" in df_cached.columns:
             print(f"  Cached: {fund_name} ({len(df_cached)} holdings)")
             return df_cached
         else:
@@ -192,13 +205,15 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
         records = []
         for i, form in enumerate(forms):
             if form in ("13F-HR", "13F-HR/A"):
-                records.append({
-                    "fund": fund_name,
-                    "form": form,
-                    "filing_date": dates[i],
-                    "accession": accessions[i],
-                    "primary_doc": primary_docs[i] if i < len(primary_docs) else None,
-                })
+                records.append(
+                    {
+                        "fund": fund_name,
+                        "form": form,
+                        "filing_date": dates[i],
+                        "accession": accessions[i],
+                        "primary_doc": primary_docs[i] if i < len(primary_docs) else None,
+                    }
+                )
 
         if not records:
             print(f"  No 13F filings found for {fund_name}")
@@ -207,23 +222,21 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
         df_filings = pd.DataFrame(records)
         print(f"  Found {len(df_filings)} 13F filings for {fund_name} (latest: {df_filings['filing_date'].iloc[0]})")
 
-        window = df_filings[
-            (df_filings['filing_date'] >= start_date) &
-            (df_filings['filing_date'] <= end_date)
-        ].copy()
+        window = df_filings[(df_filings["filing_date"] >= start_date) & (df_filings["filing_date"] <= end_date)].copy()
 
         # Deduplicate amendments: keep 13F-HR/A over 13F-HR for same quarter
         # Derive report_period from filing_date (filings are due ~45 days after quarter-end)
-        window['report_quarter'] = pd.to_datetime(window['filing_date']).apply(
-            lambda d: (d - pd.DateOffset(months=2)).to_period('Q').strftime('%YQ%q'))
-        window = window.sort_values('form', ascending=False)  # 13F-HR/A sorts after 13F-HR
-        window = window.drop_duplicates(subset=['fund', 'report_quarter'], keep='first')
+        window["report_quarter"] = pd.to_datetime(window["filing_date"]).apply(
+            lambda d: (d - pd.DateOffset(months=2)).to_period("Q").strftime("%YQ%q")
+        )
+        window = window.sort_values("form", ascending=False)  # 13F-HR/A sorts after 13F-HR
+        window = window.drop_duplicates(subset=["fund", "report_quarter"], keep="first")
 
         all_holdings = []
         for _, filing in window.iterrows():
-            acc_no = filing['accession'].replace('-', '')
-            acc_dash = filing['accession']
-            cik_stripped = cik.lstrip('0')
+            acc_no = filing["accession"].replace("-", "")
+            acc_dash = filing["accession"]
+            cik_stripped = cik.lstrip("0")
             base_url = f"https://www.sec.gov/Archives/edgar/data/{cik_stripped}/{acc_no}/"
 
             try:
@@ -232,7 +245,9 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
                 try:
                     idx_resp = requests.get(
                         f"https://data.sec.gov/Archives/edgar/data/{cik_stripped}/{acc_no}/index.json",
-                        headers=SEC_HEADERS, timeout=15)
+                        headers=SEC_HEADERS,
+                        timeout=15,
+                    )
                     idx_resp.raise_for_status()
                     idx_data = idx_resp.json()
                     for item in idx_data.get("directory", {}).get("item", []):
@@ -241,7 +256,7 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
                             info_file = item["name"]
                             break
                         # Broader: any XML that's not primary_doc.xml
-                        if name.endswith('.xml') and name != 'primary_doc.xml' and info_file is None:
+                        if name.endswith(".xml") and name != "primary_doc.xml" and info_file is None:
                             info_file = item["name"]
                 except Exception:
                     pass
@@ -249,21 +264,23 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
                 # Fallback: scrape HTML index for INFORMATION TABLE typed files
                 if not info_file:
                     import re
+
                     idx_url = f"{base_url}{acc_dash}-index.htm"
                     idx_resp = requests.get(idx_url, headers=SEC_HEADERS, timeout=15)
                     if idx_resp.status_code == 200:
                         matches = re.findall(
                             r'href="[^"]*?/([^/"]+\.xml)"[^<]*</a>\s*</td>\s*<td[^>]*>\s*INFORMATION TABLE',
-                            idx_resp.text, re.IGNORECASE)
+                            idx_resp.text,
+                            re.IGNORECASE,
+                        )
                         if matches:
                             info_file = matches[0]
                         else:
                             # Any non-primary XML
                             xml_files = re.findall(r'href="[^"]*?/([^/"]+\.xml)"', idx_resp.text)
-                            xml_files = [f for f in xml_files if f != 'primary_doc.xml']
+                            xml_files = [f for f in xml_files if f != "primary_doc.xml"]
                             if xml_files:
                                 info_file = xml_files[0]
-                    info_url = base_url
 
                 if info_file:
                     xml_url = base_url + info_file
@@ -285,18 +302,20 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
                         share_type = shares_node.findtext(f"{ns}sshPrnamtType", "") if shares_node else ""
                         put_call = entry.findtext(f"{ns}putCall", "")
 
-                        all_holdings.append({
-                            "fund": fund_name,
-                            "filing_date": filing["filing_date"],
-                            "report_period": filing.get("report_quarter", filing["filing_date"][:7]),
-                            "issuer": ' '.join(name_of_issuer.split()),
-                            "title": ' '.join(title.split()),
-                            "cusip": cusip,
-                            "value_thousands": int(value) if value else 0,
-                            "shares": int(shares) if shares else 0,
-                            "share_type": share_type,
-                            "put_call": put_call,
-                        })
+                        all_holdings.append(
+                            {
+                                "fund": fund_name,
+                                "filing_date": filing["filing_date"],
+                                "report_period": filing.get("report_quarter", filing["filing_date"][:7]),
+                                "issuer": " ".join(name_of_issuer.split()),
+                                "title": " ".join(title.split()),
+                                "cusip": cusip,
+                                "value_thousands": int(value) if value else 0,
+                                "shares": int(shares) if shares else 0,
+                                "share_type": share_type,
+                                "put_call": put_call,
+                            }
+                        )
 
                 time.sleep(0.15)
             except Exception as e:
@@ -322,69 +341,77 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw",
 # CFTC — Commitments of Traders
 # ---------------------------------------------------------------------------
 
+
 def fetch_cftc_data(cache_path=None):
     """Fetch CFTC Traders in Financial Futures report for equity index futures."""
     if cache_path and os.path.exists(cache_path):
         print(f"Loading cached CFTC data from {cache_path}")
-        return pd.read_csv(cache_path, parse_dates=['date'])
+        return pd.read_csv(cache_path, parse_dates=["date"])
 
     print("Fetching CFTC Commitments of Traders data...")
-    cftc_url = "https://www.cftc.gov/dea/newcot/FinFutL.txt"
 
-    try:
-        resp = requests.get(cftc_url, timeout=30)
-        resp.raise_for_status()
+    # CFTC provides historical compressed ZIPs with proper headers per year
+    base_url = "https://www.cftc.gov/files/dea/history/fut_fin_txt_{year}.zip"
+    current_year = pd.Timestamp.now().year
+    years = range(current_year - 2, current_year + 1)  # 3 years of data
 
-        df = pd.read_csv(StringIO(resp.text))
-
-        equity_keywords = ['S&P 500', 'E-MINI S&P', 'DJIA', 'DOW JONES', 'NASDAQ', 'RUSSELL']
-        mask = df['Market_and_Exchange_Names'].str.upper().apply(
-            lambda x: any(k in x.upper() for k in equity_keywords) if pd.notna(x) else False
-        )
-        df_equity = df[mask].copy()
-
-        if df_equity.empty:
-            print("  No equity index futures found, keeping all data")
-            df_equity = df.copy()
-
-        result = pd.DataFrame({
-            'date': pd.to_datetime(df_equity['Report_Date_as_YYYY-MM-DD']),
-            'market': df_equity['Market_and_Exchange_Names'],
-            'lev_fund_long': pd.to_numeric(df_equity.get('Lev_Money_Positions_Long_All', 0), errors='coerce'),
-            'lev_fund_short': pd.to_numeric(df_equity.get('Lev_Money_Positions_Short_All', 0), errors='coerce'),
-            'lev_fund_spreading': pd.to_numeric(df_equity.get('Lev_Money_Positions_Spread_All', 0), errors='coerce'),
-        })
-        result['lev_fund_net'] = result['lev_fund_long'] - result['lev_fund_short']
-        result = result.sort_values('date').reset_index(drop=True)
-
-        if cache_path:
-            result.to_csv(cache_path, index=False)
-            print(f"Saved {len(result)} records to {cache_path}")
-
-        print(f"CFTC data: {len(result)} records, {result['date'].min().date()} to {result['date'].max().date()}")
-        return result
-
-    except Exception as e:
-        print(f"Error fetching CFTC data: {e}")
-        print("Trying alternative CFTC source...")
-
+    frames = []
+    for year in years:
+        url = base_url.format(year=year)
         try:
-            alt_url = "https://www.cftc.gov/dea/newcot/FinComAll.txt"
-            resp = requests.get(alt_url, timeout=30)
+            resp = requests.get(url, timeout=30)
             resp.raise_for_status()
-            df = pd.read_csv(StringIO(resp.text))
-            print(f"  Loaded alternative CFTC data: {len(df)} records")
-            if cache_path:
-                df.to_csv(cache_path, index=False)
-            return df
-        except Exception as e2:
-            print(f"  Alternative also failed: {e2}")
-            return pd.DataFrame()
+            z = zipfile.ZipFile(BytesIO(resp.content))
+            with z.open(z.namelist()[0]) as f:
+                df = pd.read_csv(f)
+            frames.append(df)
+            print(f"  {year}: {len(df)} records")
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"  {year}: skipped ({e})")
+
+    if not frames:
+        print("Error: could not fetch any CFTC data")
+        return pd.DataFrame()
+
+    df = pd.concat(frames, ignore_index=True)
+
+    equity_keywords = ["S&P 500", "E-MINI S&P", "DJIA", "DOW JONES", "NASDAQ", "RUSSELL"]
+    mask = (
+        df["Market_and_Exchange_Names"]
+        .str.upper()
+        .apply(lambda x: any(k in x.upper() for k in equity_keywords) if pd.notna(x) else False)
+    )
+    df_equity = df[mask].copy()
+
+    if df_equity.empty:
+        print("  No equity index futures found, keeping all data")
+        df_equity = df.copy()
+
+    result = pd.DataFrame(
+        {
+            "date": pd.to_datetime(df_equity["Report_Date_as_YYYY-MM-DD"]),
+            "market": df_equity["Market_and_Exchange_Names"],
+            "lev_fund_long": pd.to_numeric(df_equity.get("Lev_Money_Positions_Long_All", 0), errors="coerce"),
+            "lev_fund_short": pd.to_numeric(df_equity.get("Lev_Money_Positions_Short_All", 0), errors="coerce"),
+            "lev_fund_spreading": pd.to_numeric(df_equity.get("Lev_Money_Positions_Spread_All", 0), errors="coerce"),
+        }
+    )
+    result["lev_fund_net"] = result["lev_fund_long"] - result["lev_fund_short"]
+    result = result.sort_values("date").reset_index(drop=True)
+
+    if cache_path:
+        result.to_csv(cache_path, index=False)
+        print(f"Saved {len(result)} records to {cache_path}")
+
+    print(f"CFTC data: {len(result)} records, {result['date'].min().date()} to {result['date'].max().date()}")
+    return result
 
 
 # ---------------------------------------------------------------------------
 # SEC EDGAR — Form ADV (Investment Adviser Registration)
 # ---------------------------------------------------------------------------
+
 
 def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
     """Fetch Form ADV data from SEC EDGAR for a given fund.
@@ -430,15 +457,18 @@ def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
         # Collect all filings (not just 13F)
         filing_records = []
         for i, form in enumerate(forms):
-            filing_records.append({
-                "form": form,
-                "filing_date": dates[i],
-                "accession": accessions[i],
-                "primary_doc": primary_docs[i] if i < len(primary_docs) else None,
-            })
+            filing_records.append(
+                {
+                    "form": form,
+                    "filing_date": dates[i],
+                    "accession": accessions[i],
+                    "primary_doc": primary_docs[i] if i < len(primary_docs) else None,
+                }
+            )
 
         # Summary by filing type
         from collections import Counter
+
         form_counts = Counter(forms)
 
         result = {
@@ -453,7 +483,7 @@ def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
         }
 
         # Look for ADV filings specifically
-        adv_filings = [f for f in filing_records if 'ADV' in f['form']]
+        adv_filings = [f for f in filing_records if "ADV" in f["form"]]
         result["adv_filings"] = adv_filings
         result["adv_count"] = len(adv_filings)
 
@@ -461,12 +491,12 @@ def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
         # CIK and IAPD numbers are different — IAPD uses SEC file numbers
         iapd_numbers = []
         for i, form in enumerate(forms):
-            if 'ADV' in form:
+            if "ADV" in form:
                 iapd_numbers.append(accessions[i])
         result["iapd_accessions"] = iapd_numbers[:10]  # Keep recent ones
 
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, 'w') as f:
+        with open(cache_path, "w") as f:
             json.dump(result, f, indent=2)
         print(f"  Saved {fund_name} ADV data ({len(filing_records)} total filings, {len(adv_filings)} ADV)")
 
@@ -485,14 +515,15 @@ def fetch_all_fund_profiles(cache_dir="data/raw"):
         profile = fetch_form_adv(cik, fund_name, cache_dir=cache_dir)
         if profile:
             profiles[fund_name] = profile
-            info = profile.get("company_info", {})
             counts = profile.get("filing_type_counts", {})
             adv_count = profile.get("adv_count", 0)
             total = profile.get("total_filings", 0)
             date_range = profile.get("filing_date_range", {})
             print(f"    {fund_name}: {total} filings ({date_range.get('earliest')} to {date_range.get('latest')})")
-            print(f"      ADV: {adv_count}, 13F: {counts.get('13F-HR', 0)}, "
-                  f"SC 13G: {counts.get('SC 13G', 0) + counts.get('SC 13G/A', 0)}")
+            print(
+                f"      ADV: {adv_count}, 13F: {counts.get('13F-HR', 0)}, "
+                f"SC 13G: {counts.get('SC 13G', 0) + counts.get('SC 13G/A', 0)}"
+            )
         time.sleep(0.15)
     return profiles
 
@@ -514,7 +545,7 @@ if __name__ == "__main__":
         exit(1)
 
     fred = Fred(api_key=FRED_API_KEY)
-    raw_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw')
+    raw_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw")
     os.makedirs(raw_dir, exist_ok=True)
 
     print("=" * 60)
@@ -523,30 +554,31 @@ if __name__ == "__main__":
 
     # 1. FRED hedge fund balance sheet
     print("\n[1/4] FRED — Hedge Fund Balance Sheet")
-    fetch_hedge_fund_data(fred, HEDGE_FUND_SERIES,
-                          cache_path=os.path.join(raw_dir, 'hedge_fund_balance_sheet_fred.csv'))
+    fetch_hedge_fund_data(
+        fred, HEDGE_FUND_SERIES, cache_path=os.path.join(raw_dir, "hedge_fund_balance_sheet_fred.csv")
+    )
 
     # 2. VIX
     print("\n[2/4] FRED — VIX Volatility Index")
-    fetch_vix_data(fred, cache_path=os.path.join(raw_dir, 'vix_quarterly.csv'))
+    fetch_vix_data(fred, cache_path=os.path.join(raw_dir, "vix_quarterly.csv"))
 
     # 3. SEC 13F
     print("\n[3/4] SEC EDGAR — 13F Holdings")
     holdings_list = []
     for fund_name, cik in HEDGE_FUND_CIKS.items():
         df_fund = fetch_13f_holdings(cik, fund_name, cache_dir=raw_dir)
-        if not df_fund.empty and 'value_thousands' in df_fund.columns:
+        if not df_fund.empty and "value_thousands" in df_fund.columns:
             holdings_list.append(df_fund)
         time.sleep(0.2)
 
     if holdings_list:
         df_13f = pd.concat(holdings_list, ignore_index=True)
-        df_13f.to_csv(os.path.join(raw_dir, '13f_all_holdings.csv'), index=False)
+        df_13f.to_csv(os.path.join(raw_dir, "13f_all_holdings.csv"), index=False)
         print(f"Total 13F holdings: {len(df_13f)} records across {df_13f['fund'].nunique()} funds")
 
     # 4. CFTC
     print("\n[4/5] CFTC — Commitments of Traders")
-    fetch_cftc_data(cache_path=os.path.join(raw_dir, 'cftc_cot.csv'))
+    fetch_cftc_data(cache_path=os.path.join(raw_dir, "cftc_cot.csv"))
 
     # 5. Fund profiles (Form ADV + submission history)
     print("\n[5/5] SEC EDGAR — Fund Profiles (Submissions API)")

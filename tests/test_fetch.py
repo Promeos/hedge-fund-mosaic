@@ -6,7 +6,6 @@ from src.data.fetch import HEDGE_FUND_CIKS, HEDGE_FUND_SERIES, SEC_HEADERS
 
 
 class TestConstants:
-
     def test_all_fred_series_ids_start_with_bogz1(self):
         """All Z.1 series IDs should follow the BOGZ1FL62* pattern."""
         for name, sid in HEDGE_FUND_SERIES.items():
@@ -36,7 +35,6 @@ class TestConstants:
 
 
 class TestFetchHedgeFundDataCache:
-
     def test_loads_from_cache(self, tmp_path):
         """When cache file exists, fetch_hedge_fund_data should read it without calling FRED."""
         from src.data.fetch import fetch_hedge_fund_data
