@@ -13,7 +13,7 @@ financial_data/
 ├── LICENSE                      # CC BY-SA 4.0
 ├── .claude/
 │   ├── settings.local.json      # Claude Code permissions
-│   ├── agents/                  # 16 specialized agent definitions
+│   ├── agents/                  # 17 specialized agent definitions
 │   │   ├── data-engineer.md     # Data pipeline agent (9 sources)
 │   │   ├── analyst.md           # Financial analysis agent
 │   │   ├── visualizer.md        # Charting agent (18 chart functions)
@@ -29,8 +29,9 @@ financial_data/
 │   │   ├── cross-source-analyst.md  # Cross-source reconciliation
 │   │   ├── pipeline-orchestrator.md # Pipeline status, freshness, orchestration
 │   │   ├── anomaly-detector.md  # Outlier detection, divergence alerts, risk scoring
-│   │   └── factor-analyst.md    # PCA, factor exposure, strategy clustering
-│   └── commands/                # 15 slash commands
+│   │   ├── factor-analyst.md    # PCA, factor exposure, strategy clustering
+│   │   └── notebook-reviewer.md # Chart formatting, tick labels, legends, readability
+│   └── commands/                # 16 slash commands
 │       ├── refresh-data.md      # /refresh-data
 │       ├── run-analysis.md      # /run-analysis
 │       ├── validate-data.md     # /validate-data
@@ -45,7 +46,8 @@ financial_data/
 │       ├── check-freshness.md   # /check-freshness
 │       ├── fetch-13f.md         # /fetch-13f
 │       ├── quick-stats.md       # /quick-stats
-│       └── compare-quarters.md  # /compare-quarters
+│       ├── compare-quarters.md  # /compare-quarters
+│       └── review-charts.md    # /review-charts
 ├── .env                         # API keys (never commit)
 ├── requirements.txt             # Python dependencies
 ├── data/
@@ -148,7 +150,7 @@ pytest tests/
 - SEC EDGAR `User-Agent` header needs real contact email for production
 - All other data sources are publicly accessible without credentials
 
-## Agents (16)
+## Agents (17)
 
 | Agent | File | Purpose |
 |-------|------|---------|
@@ -168,8 +170,9 @@ pytest tests/
 | Pipeline Orchestrator | `pipeline-orchestrator.md` | Pipeline status, freshness audit, incremental fetch, dependency management |
 | Anomaly Detector | `anomaly-detector.md` | Z-score outliers, cross-source divergence, composite risk scoring |
 | Factor Analyst | `factor-analyst.md` | PCA decomposition, factor exposure, strategy clustering, leverage attribution |
+| Notebook Reviewer | `notebook-reviewer.md` | Chart formatting audit, tick labels, legends, spines, readability |
 
-## Slash Commands (15)
+## Slash Commands (16)
 
 | Command | Purpose |
 |---------|---------|
@@ -188,6 +191,7 @@ pytest tests/
 | `/fetch-13f` | Fetch current 13F holdings for all 8 tracked funds |
 | `/quick-stats` | Fast summary of latest metrics (console only) |
 | `/compare-quarters` | Quarter-over-quarter change analysis |
+| `/review-charts` | Audit and fix chart formatting across plots.py and notebook |
 
 ## Derived Metrics Reference
 

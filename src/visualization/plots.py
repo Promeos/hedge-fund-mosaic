@@ -8,10 +8,12 @@ DPI 100, and include market event annotations. Output to outputs/figures/.
 
 import os
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 # ---------------------------------------------------------------------------
 # Style defaults
@@ -75,6 +77,45 @@ def _save(fig, save_path):
         fig.savefig(save_path, bbox_inches="tight", dpi=150)
 
 
+# Tick formatters
+fmt_billions = FuncFormatter(lambda x, _: f"${x:,.0f}B")
+fmt_pct = FuncFormatter(lambda x, _: f"{x:.0f}%")
+fmt_ratio = FuncFormatter(lambda x, _: f"{x:.2f}x")
+
+
+def _polish(ax, ylabel_fmt=None, date_axis=True):
+    """Apply standard formatting polish to an axes.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+    ylabel_fmt : FuncFormatter or None
+        Formatter for the y-axis (e.g. fmt_billions, fmt_pct, fmt_ratio).
+    date_axis : bool
+        If True, format x-axis as dates with year ticks and rotation.
+    """
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.grid(alpha=0.3)
+    ax.tick_params(labelsize=10)
+    if ylabel_fmt:
+        ax.yaxis.set_major_formatter(ylabel_fmt)
+    if date_axis:
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
+
+def _merge_legends(ax1, ax2, **kwargs):
+    """Combine legends from a dual-axis chart onto ax1."""
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    kw = {"loc": "upper left", "framealpha": 0.9, "edgecolor": "gray", "fontsize": 10}
+    kw.update(kwargs)
+    ax1.legend(lines1 + lines2, labels1 + labels2, **kw)
+    if ax2.get_legend():
+        ax2.get_legend().remove()
+
+
 # ---------------------------------------------------------------------------
 # Chart functions
 # ---------------------------------------------------------------------------
@@ -96,7 +137,10 @@ def plot_total_assets(df, save_path=None):
 
     add_event_annotations(ax1)
     ax1.set_title("Hedge Fund Industry — Total Assets & Quarterly Growth")
-    fig.legend(loc="upper left", bbox_to_anchor=(0.12, 0.88))
+    _polish(ax1, ylabel_fmt=fmt_billions)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_pct)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -125,17 +169,19 @@ def plot_asset_composition(df, save_path=None):
 
     # Absolute
     ax1.stackplot(df_plot.index, *[df_plot[c] for c in cols_to_stack], labels=cols_to_stack, alpha=0.8)
-    ax1.set_title("Asset Composition (Absolute, $B)")
-    ax1.legend(loc="upper left", fontsize=9)
+    ax1.set_title("Asset Composition (Absolute)")
+    ax1.legend(loc="upper left", fontsize=9, framealpha=0.9, edgecolor="gray")
     add_event_annotations(ax1)
+    _polish(ax1, ylabel_fmt=fmt_billions)
 
     # Proportional
     totals = df_plot[cols_to_stack].sum(axis=1)
     pct_data = df_plot[cols_to_stack].div(totals, axis=0) * 100
     ax2.stackplot(df_plot.index, *[pct_data[c] for c in cols_to_stack], labels=cols_to_stack, alpha=0.8)
     ax2.set_title("Asset Composition (% of Total)")
-    ax2.set_ylabel("%")
+    ax2.set_ylabel("Share (%)")
     add_event_annotations(ax2)
+    _polish(ax2, ylabel_fmt=fmt_pct)
 
     plt.tight_layout()
     _save(fig, save_path)
@@ -158,9 +204,10 @@ def plot_debt_securities(df, save_path=None):
     ax.fill_between(df.index, df["Corporate and foreign bonds; asset"], alpha=0.1, color=COLORS["red"])
 
     ax.set_title("Debt Securities Breakdown")
-    ax.set_ylabel("$B")
-    ax.legend()
+    ax.set_ylabel("Value ($B)")
+    ax.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -181,9 +228,10 @@ def plot_liability_structure(df, save_path=None):
 
     ax1.stackplot(df.index, *[liab_data[c] for c in liab_data.columns], labels=liab_data.columns, alpha=0.8)
     ax1.set_title("Liability Structure")
-    ax1.set_ylabel("$B")
-    ax1.legend(loc="upper left")
+    ax1.set_ylabel("Value ($B)")
+    ax1.legend(loc="upper left", framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax1)
+    _polish(ax1, ylabel_fmt=fmt_billions)
 
     ax2.plot(df.index, df["leverage_ratio"], linewidth=2.5, color=COLORS["dark_red"])
     ax2.axhline(
@@ -193,8 +241,9 @@ def plot_liability_structure(df, save_path=None):
         alpha=0.5,
         label=f"Mean: {df['leverage_ratio'].mean():.2f}x",
     )
-    ax2.set_ylabel("Leverage Ratio (x)")
-    ax2.legend()
+    ax2.set_ylabel("Leverage Ratio")
+    ax2.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
+    _polish(ax2, ylabel_fmt=fmt_ratio)
 
     plt.tight_layout()
     _save(fig, save_path)
@@ -213,9 +262,10 @@ def plot_balance_sheet_overview(df, save_path=None):
     ax.fill_between(df.index, 0, df["Total net assets"], alpha=0.05, color=COLORS["green"])
 
     ax.set_title("Balance Sheet Overview — Assets vs Liabilities vs Net Assets")
-    ax.set_ylabel("$B")
-    ax.legend()
+    ax.set_ylabel("Value ($B)")
+    ax.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -247,8 +297,11 @@ def plot_derivative_exposure(df, save_path=None):
     ax2.set_ylabel("% of Total Assets", color=COLORS["light_orange"])
 
     add_event_annotations(ax1)
-    ax1.set_title("Derivative Exposure")
-    fig.legend(loc="upper left", bbox_to_anchor=(0.12, 0.88))
+    ax1.set_title("Derivative Exposure — Absolute & Ratio to Total Assets")
+    _polish(ax1, ylabel_fmt=fmt_billions)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_pct)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -263,15 +316,17 @@ def plot_borrowing_patterns(df, save_path=None):
     ax1.fill_between(df.index, df["domestic_borrowing"], alpha=0.1, color=COLORS["blue"])
     ax1.fill_between(df.index, df["foreign_borrowing"], alpha=0.1, color=COLORS["red"])
     ax1.set_title("Borrowing by Source (Absolute)")
-    ax1.set_ylabel("$B")
-    ax1.legend()
+    ax1.set_ylabel("Value ($B)")
+    ax1.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax1)
+    _polish(ax1, ylabel_fmt=fmt_billions)
 
     ax2.plot(df.index, df["foreign_borrowing_share"] * 100, linewidth=2, color=COLORS["red"])
     ax2.fill_between(df.index, df["foreign_borrowing_share"] * 100, alpha=0.1, color=COLORS["red"])
-    ax2.set_title("Foreign Borrowing Share (%)")
-    ax2.set_ylabel("%")
+    ax2.set_title("Foreign Borrowing Share")
+    ax2.set_ylabel("Foreign Share (%)")
     add_event_annotations(ax2)
+    _polish(ax2, ylabel_fmt=fmt_pct)
 
     plt.tight_layout()
     _save(fig, save_path)
@@ -301,6 +356,9 @@ def plot_correlation_heatmap(df, cols=None, save_path=None):
         corr, annot=True, fmt=".2f", cmap="RdBu_r", center=0, xticklabels=short_labels, yticklabels=short_labels, ax=ax
     )
     ax.set_title("Balance Sheet Component Correlations")
+    ax.tick_params(labelsize=10)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+    plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -341,14 +399,13 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
 
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
-    ax1.plot(data["date"], data["gav"], linewidth=2.5, color=COLORS["blue"], label="GAV ($B)")
-    ax1.plot(data["date"], data["nav"], linewidth=2.5, color=COLORS["green"], label="NAV ($B)")
-    ax1.set_ylabel("$B")
-    ax1.legend(loc="upper left")
+    ax1.plot(data["date"], data["gav"], linewidth=2.5, color=COLORS["blue"], label="GAV")
+    ax1.plot(data["date"], data["nav"], linewidth=2.5, color=COLORS["green"], label="NAV")
+    ax1.set_ylabel("Value ($B)")
 
     ax2 = ax1.twinx()
     ax2.plot(data["date"], data["gav_nav_ratio"], linewidth=2, color=COLORS["red"], label="GAV / NAV")
-    ax2.set_ylabel("GAV / NAV Ratio", color=COLORS["red"])
+    ax2.set_ylabel("GAV / NAV Ratio")
 
     if z1_df is not None and "leverage_ratio" in z1_df.columns:
         ax2.plot(
@@ -360,9 +417,12 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
             label="Z.1 Leverage Ratio",
         )
 
-    ax2.legend(loc="upper right")
     add_event_annotations(ax1)
     ax1.set_title("Form PF — Hedge Fund Leverage (GAV/NAV)")
+    _polish(ax1, ylabel_fmt=fmt_billions)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_ratio)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -392,8 +452,9 @@ def plot_strategy_allocation(df, save_path=None):
     ax.stackplot(pivot.index, *[pivot[c] for c in pivot.columns], labels=pivot.columns, alpha=0.8)
     ax.set_title("Form PF — Hedge Fund Strategy Allocation (NAV)")
     ax.set_ylabel("NAV ($B)")
-    ax.legend(loc="upper left", fontsize=9, ncol=2)
+    ax.legend(loc="upper left", fontsize=9, ncol=2, framealpha=0.9, edgecolor="gray")
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -436,7 +497,10 @@ def plot_notional_exposure(df, save_path=None):
     ax.axhline(0, color="gray", linewidth=0.5)
     ax.set_ylabel("Notional ($B)")
     ax.set_title(f"Form PF — Notional Exposure by Investment Type ({latest_q})")
-    ax.legend()
+    ax.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.yaxis.set_major_formatter(fmt_billions)
+    ax.tick_params(labelsize=10)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -495,8 +559,9 @@ def plot_concentration_trend(df, save_path=None):
 
     ax.set_ylabel("NAV Share (%)")
     ax.set_title("Form PF — Fund Concentration Trends")
-    ax.legend()
+    ax.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_pct)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -550,6 +615,7 @@ def plot_liquidity_mismatch(df, save_path=None):
         ax.fill_between(subset["date"], subset["cumulative_pct"] * 100, alpha=0.15, color=color)
         ax.set_title(ltype.replace("_", " ").title(), fontsize=11)
         ax.set_ylabel("Cumulative % at 30 Days")
+        _polish(ax, ylabel_fmt=fmt_pct)
         add_event_annotations(ax)
 
     fig.suptitle("Form PF — Liquidity at 30 Days by Type", fontsize=14, y=1.02)
@@ -623,8 +689,9 @@ def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
 
     ax.set_ylabel("Cleared (%)")
     ax.set_title("OTC Derivatives — Clearing Rates")
-    ax.legend()
+    ax.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_pct)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -668,8 +735,7 @@ def plot_fcm_capital(df, save_path=None):
         color=COLORS["green"],
         label="Excess Net Capital ($B)",
     )
-    ax1.set_ylabel("$B")
-    ax1.legend(loc="upper left")
+    ax1.set_ylabel("Value ($B)")
 
     ax2 = ax1.twinx()
     ax2.plot(
@@ -680,11 +746,14 @@ def plot_fcm_capital(df, save_path=None):
         linestyle="--",
         label="Capital Adequacy Ratio",
     )
-    ax2.set_ylabel("Capital Adequacy Ratio", color=COLORS["orange"])
-    ax2.legend(loc="upper right")
+    ax2.set_ylabel("Adequacy Ratio")
 
     add_event_annotations(ax1)
     ax1.set_title("FCM Industry — Capital & Adequacy")
+    _polish(ax1, ylabel_fmt=fmt_billions)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_ratio)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -716,16 +785,18 @@ def plot_fcm_concentration(df, save_path=None):
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
     ax1.plot(data["date"], data["hhi"], linewidth=2.5, color=COLORS["purple"], label="HHI")
-    ax1.set_ylabel("HHI", color=COLORS["purple"])
-    ax1.legend(loc="upper left")
+    ax1.set_ylabel("HHI")
 
     ax2 = ax1.twinx()
     ax2.plot(data["date"], data["top5_share"] * 100, linewidth=2, color=COLORS["teal"], label="Top 5 Share (%)")
-    ax2.set_ylabel("Top 5 Share (%)", color=COLORS["teal"])
-    ax2.legend(loc="upper right")
+    ax2.set_ylabel("Top 5 Share (%)")
 
     add_event_annotations(ax1)
     ax1.set_title("FCM Industry — Market Concentration")
+    _polish(ax1)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_pct)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -759,16 +830,18 @@ def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
     ax1.plot(z1_df.index, z1_df["leverage_ratio"], linewidth=2.5, color=COLORS["blue"], label="Z.1 Leverage Ratio")
-    ax1.set_ylabel("Z.1 Leverage Ratio", color=COLORS["blue"])
-    ax1.legend(loc="upper left")
+    ax1.set_ylabel("Z.1 Leverage Ratio")
 
     ax2 = ax1.twinx()
     ax2.plot(pf["date"], pf["gav_nav_ratio"], linewidth=2.5, color=COLORS["red"], label="Form PF GAV/NAV")
-    ax2.set_ylabel("Form PF GAV / NAV", color=COLORS["red"])
-    ax2.legend(loc="upper right")
+    ax2.set_ylabel("Form PF GAV / NAV")
 
     add_event_annotations(ax1)
     ax1.set_title("Cross-Source Leverage Comparison — Z.1 vs Form PF")
+    _polish(ax1, ylabel_fmt=fmt_ratio)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_ratio)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -812,8 +885,9 @@ def plot_swaps_notional(df, save_path=None):
     ax.stackplot(data["date"], *[data[c].fillna(0) for c in cols], labels=labels, colors=colors, alpha=0.8)
     ax.set_ylabel("Notional Outstanding ($B)")
     ax.set_title("OTC Swap Notional Outstanding by Asset Class")
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper left", framealpha=0.9, edgecolor="gray", fontsize=10)
     add_event_annotations(ax)
+    _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -862,6 +936,9 @@ def plot_granger_heatmap(p_matrix, save_path=None):
     ax.set_title("Granger Causality Matrix (row causes column)")
     ax.set_xlabel("Effect")
     ax.set_ylabel("Cause")
+    ax.tick_params(labelsize=10)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+    plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -884,6 +961,8 @@ def plot_impulse_response(irf_df, variables, save_path=None):
                 ax.fill_between(periods, vals, alpha=0.15, color=COLORS["blue"])
                 ax.axhline(0, color="gray", linewidth=0.5)
             ax.set_title(f"{shock.split('_')[-1]} → {response.split('_')[-1]}", fontsize=9)
+            ax.spines[["top", "right"]].set_visible(False)
+            ax.tick_params(labelsize=8)
             if j == n - 1:
                 ax.set_xlabel("Quarters")
             if i == 0:
@@ -930,10 +1009,13 @@ def plot_monte_carlo(mc_results, variable, save_path=None):
     )
 
     ax1.set_xlabel("Quarters")
-    ax1.set_ylabel("$B")
+    ax1.set_ylabel("Value ($B)")
     short_name = variable.replace("z1_", "").replace("_", " ").title()
     ax1.set_title(f"Monte Carlo: {short_name} ({paths.shape[0]:,} paths)")
-    ax1.legend(fontsize=8)
+    ax1.legend(fontsize=8, framealpha=0.9, edgecolor="gray")
+    ax1.spines[["top", "right"]].set_visible(False)
+    ax1.yaxis.set_major_formatter(fmt_billions)
+    ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # Distribution of final values
     final = r["final_returns"] * 100
@@ -950,7 +1032,9 @@ def plot_monte_carlo(mc_results, variable, save_path=None):
     ax2.set_xlabel(f"{n_quarters}Q Return (%)")
     ax2.set_ylabel("Frequency")
     ax2.set_title(f"Return Distribution (P(negative)={r['prob_negative']:.1%})")
-    ax2.legend()
+    ax2.legend(framealpha=0.9, edgecolor="gray", fontsize=10)
+    ax2.spines[["top", "right"]].set_visible(False)
+    ax2.xaxis.set_major_formatter(fmt_pct)
 
     plt.tight_layout()
     _save(fig, save_path)
@@ -980,7 +1064,8 @@ def plot_structural_breaks(series, breaks_result, save_path=None):
 
     add_event_annotations(ax)
     ax.set_title(f"Structural Breaks — {breaks_result.get('name', '')}")
-    ax.legend(fontsize=9)
+    ax.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
+    _polish(ax)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -995,7 +1080,7 @@ def plot_strategy_hhi(hhi_df, save_path=None):
 
     ax1.plot(hhi_df["date"], hhi_df["hhi"], linewidth=2.5, color=COLORS["purple"], label="Strategy HHI")
     ax1.fill_between(hhi_df["date"], hhi_df["hhi"], alpha=0.15, color=COLORS["purple"])
-    ax1.set_ylabel("HHI (lower = more diversified)", color=COLORS["purple"])
+    ax1.set_ylabel("HHI (lower = more diversified)")
 
     ax2 = ax1.twinx()
     ax2.plot(
@@ -1006,11 +1091,14 @@ def plot_strategy_hhi(hhi_df, save_path=None):
         linestyle="--",
         label="Top Strategy Share (%)",
     )
-    ax2.set_ylabel("Top Strategy Share (%)", color=COLORS["teal"])
+    ax2.set_ylabel("Top Strategy Share (%)")
 
     ax1.set_title("Form PF — Strategy Concentration Over Time")
-    fig.legend(loc="upper left", bbox_to_anchor=(0.12, 0.88))
     add_event_annotations(ax1)
+    _polish(ax1)
+    ax2.spines[["top"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_pct)
+    _merge_legends(ax1, ax2)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()
@@ -1046,7 +1134,8 @@ def plot_liquidity_mismatch_detail(liquidity_results, save_path=None):
 
         ax.set_title(period, fontsize=11)
         ax.set_ylabel("Investor - Portfolio (%)")
-        ax.legend(fontsize=8)
+        ax.legend(fontsize=8, framealpha=0.9, edgecolor="gray")
+        _polish(ax, ylabel_fmt=fmt_pct)
         add_event_annotations(ax)
 
     fig.suptitle("Form PF — Liquidity Mismatch (Investor vs Portfolio)", fontsize=14, y=1.02)
