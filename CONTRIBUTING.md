@@ -1,10 +1,10 @@
 # Contributing
 
-Thank you for your interest in contributing to Hedge Fund Autopsy.
+Thank you for your interest in contributing to Hedge Fund Mosaic.
 
 ## Reporting Issues
 
-Open a [GitHub Issue](https://github.com/Promeos/hedge-fund-autopsy/issues) for:
+Open a [GitHub Issue](https://github.com/Promeos/hedge-fund-mosaic/issues) for:
 
 - Bugs or data parsing errors
 - Broken links or unclear documentation

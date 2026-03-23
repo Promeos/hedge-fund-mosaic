@@ -1,10 +1,10 @@
-# Hedge Fund Autopsy
+# Hedge Fund Mosaic
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19187969.svg)](https://doi.org/10.5281/zenodo.19187969)
 
-Reconstructing the U.S. hedge fund industry from 9 public regulatory data sources.
+Piecing together the U.S. hedge fund industry from 9 public regulatory data sources.
 
-An open-source intelligence project dissecting the financial anatomy of U.S. hedge funds — balance sheets, derivatives, borrowing, positioning, and fund-level holdings — stitched together from sources no one combines.
+An open-source intelligence project assembling the financial picture of U.S. hedge funds — balance sheets, derivatives, borrowing, positioning, and fund-level holdings — from fragments no one else combines.
 
 ![Form PF — Hedge Fund Leverage](docs/hero_form_pf_leverage.png)
 
@@ -216,14 +216,14 @@ This project is licensed under [CC BY-SA 4.0](https://creativecommons.org/licens
 This project includes a [`CITATION.cff`](CITATION.cff) file for automated citation. You can also cite manually:
 
 ```
-Ortiz, C. (2026). Hedge Fund Autopsy: Reconstructing the U.S. hedge fund industry
+Ortiz, C. (2026). Hedge Fund Mosaic: Piecing together the U.S. hedge fund industry
 from public regulatory data (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.19187969
 ```
 
 ```bibtex
-@dataset{ortiz2026hedgefundautopsy,
+@dataset{ortiz2026hedgefundmosaic,
   author = {Ortiz, Christopher},
-  title = {Hedge Fund Autopsy: Reconstructing the U.S. Hedge Fund Industry from Public Regulatory Data},
+  title = {Hedge Fund Mosaic: Piecing Together the U.S. Hedge Fund Industry from Public Regulatory Data},
   year = {2026},
   publisher = {Zenodo},
   version = {1.0.0},

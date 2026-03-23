@@ -1,13 +1,13 @@
 cff-version: 1.2.0
-title: "Hedge Fund Autopsy: Reconstructing the U.S. Hedge Fund Industry from Public Regulatory Data"
+title: "Hedge Fund Mosaic: Piecing Together the U.S. Hedge Fund Industry from Public Regulatory Data"
 message: "If you use this dataset or software, please cite it as below."
 type: dataset
 authors:
   - given-names: Christopher
     family-names: Ortiz
 license: CC-BY-SA-4.0
-repository-code: "https://github.com/Promeos/hedge-fund-autopsy"
-url: "https://github.com/Promeos/hedge-fund-autopsy"
+repository-code: "https://github.com/Promeos/hedge-fund-mosaic"
+url: "https://github.com/Promeos/hedge-fund-mosaic"
 doi: "10.5281/zenodo.19187969"
 version: "1.0.0"
 date-released: "2026-03-23"

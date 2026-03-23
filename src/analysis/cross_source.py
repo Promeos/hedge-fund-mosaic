@@ -1,4 +1,4 @@
-"""Cross-source reconciliation, alignment, and hypothesis testing for Hedge Fund Autopsy."""
+"""Cross-source reconciliation, alignment, and hypothesis testing for Hedge Fund Mosaic."""
 
 import os
 import warnings
