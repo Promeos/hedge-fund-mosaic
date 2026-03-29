@@ -1,0 +1,442 @@
+strategy,quarter,gav,nav,borrowing
+Credit,2013Q1,158.0,99.0,4.4
+Credit,2013Q2,163.0,99.0,5.0
+Credit,2013Q3,166.0,100.0,5.7
+Credit,2013Q4,160.0,94.0,7.4
+Credit,2014Q1,204.0,120.0,9.5
+Credit,2014Q2,193.0,119.0,6.7
+Credit,2014Q3,189.0,126.0,4.0
+Credit,2014Q4,194.0,121.0,6.4
+Credit,2015Q1,197.0,118.0,5.6
+Credit,2015Q2,191.0,118.0,5.3
+Credit,2015Q3,213.0,130.0,4.9
+Credit,2015Q4,194.0,122.0,4.1
+Credit,2016Q1,190.0,123.0,4.1
+Credit,2016Q2,179.0,118.0,4.0
+Credit,2016Q3,202.0,127.0,2.9
+Credit,2016Q4,189.0,126.0,2.7
+Credit,2017Q1,193.0,124.0,3.3
+Credit,2017Q2,188.0,118.0,3.0
+Credit,2017Q3,194.0,133.0,3.1
+Credit,2017Q4,172.0,115.0,3.2
+Credit,2018Q1,172.0,115.0,3.3
+Credit,2018Q2,204.0,135.0,2.9
+Credit,2018Q3,207.0,137.0,2.8
+Credit,2018Q4,213.0,135.0,3.3
+Credit,2019Q1,206.0,132.0,3.2
+Credit,2019Q2,202.0,134.0,2.6
+Credit,2019Q3,203.0,137.0,2.4
+Credit,2019Q4,231.0,147.0,2.8
+Credit,2020Q1,220.0,128.0,3.1
+Credit,2020Q2,247.0,156.0,2.8
+Credit,2020Q3,242.0,158.0,2.8
+Credit,2020Q4,250.0,167.0,2.8
+Credit,2021Q1,281.0,186.0,3.0
+Credit,2021Q2,308.0,196.0,3.2
+Credit,2021Q3,282.0,182.0,3.0
+Credit,2021Q4,309.0,194.0,3.1
+Credit,2022Q1,331.0,205.0,3.2
+Credit,2022Q2,328.0,201.0,3.1
+Credit,2022Q3,331.0,199.0,3.2
+Credit,2022Q4,348.0,205.0,3.2
+Credit,2023Q1,358.0,209.0,3.4
+Credit,2023Q2,363.0,206.0,3.5
+Credit,2023Q3,396.0,229.0,3.4
+Credit,2023Q4,402.0,233.0,3.4
+Credit,2024Q1,424.0,237.0,3.6
+Credit,2024Q2,446.0,260.0,3.5
+Credit,2024Q3,467.0,270.0,3.5
+Credit,2024Q4,484.0,270.0,3.6
+Credit,2025Q1,481.0,270.0,3.5
+Equity,2013Q1,948.0,581.0,3.4
+Equity,2013Q2,960.0,595.0,3.4
+Equity,2013Q3,1045.0,643.0,3.3
+Equity,2013Q4,1159.0,696.0,3.5
+Equity,2014Q1,1116.0,671.0,3.8
+Equity,2014Q2,1208.0,763.0,3.3
+Equity,2014Q3,1221.0,778.0,3.2
+Equity,2014Q4,1223.0,786.0,2.9
+Equity,2015Q1,1310.0,836.0,3.2
+Equity,2015Q2,1403.0,862.0,3.2
+Equity,2015Q3,1265.0,787.0,3.1
+Equity,2015Q4,1340.0,817.0,3.2
+Equity,2016Q1,1239.0,776.0,3.4
+Equity,2016Q2,1241.0,775.0,3.2
+Equity,2016Q3,1290.0,807.0,3.1
+Equity,2016Q4,1212.0,761.0,3.0
+Equity,2017Q1,1289.0,799.0,3.2
+Equity,2017Q2,1364.0,842.0,3.2
+Equity,2017Q3,1417.0,883.0,3.2
+Equity,2017Q4,1446.0,909.0,3.2
+Equity,2018Q1,1495.0,901.0,4.0
+Equity,2018Q2,1536.0,946.0,3.3
+Equity,2018Q3,1644.0,993.0,3.6
+Equity,2018Q4,1413.0,850.0,3.5
+Equity,2019Q1,1536.0,922.0,3.6
+Equity,2019Q2,1550.0,957.0,3.3
+Equity,2019Q3,1523.0,934.0,3.3
+Equity,2019Q4,1599.0,982.0,3.1
+Equity,2020Q1,1294.0,838.0,2.7
+Equity,2020Q2,1594.0,989.0,3.0
+Equity,2020Q3,1693.0,1078.0,3.0
+Equity,2020Q4,1929.0,1224.0,2.8
+Equity,2021Q1,2056.0,1327.0,2.9
+Equity,2021Q2,2205.0,1431.0,2.9
+Equity,2021Q3,2202.0,1446.0,2.9
+Equity,2021Q4,2208.0,1436.0,3.0
+Equity,2022Q1,1973.0,1265.0,2.8
+Equity,2022Q2,1629.0,1035.0,2.9
+Equity,2022Q3,1552.0,981.0,2.9
+Equity,2022Q4,1654.0,1015.0,2.9
+Equity,2023Q1,1639.0,1013.0,2.9
+Equity,2023Q2,1805.0,1091.0,3.0
+Equity,2023Q3,1726.0,1054.0,3.0
+Equity,2023Q4,1781.0,1064.0,3.0
+Equity,2024Q1,1932.0,1150.0,3.1
+Equity,2024Q2,2102.0,1228.0,3.3
+Equity,2024Q3,2314.0,1222.0,4.3
+Equity,2024Q4,2429.0,1253.0,4.4
+Equity,2025Q1,2527.0,1321.0,4.8
+Event Driven,2013Q1,228.0,169.0,1.9
+Event Driven,2013Q2,245.0,185.0,1.9
+Event Driven,2013Q3,254.0,191.0,1.8
+Event Driven,2013Q4,280.0,210.0,1.9
+Event Driven,2014Q1,347.0,256.0,2.1
+Event Driven,2014Q2,392.0,288.0,2.1
+Event Driven,2014Q3,388.0,288.0,2.2
+Event Driven,2014Q4,369.0,274.0,2.2
+Event Driven,2015Q1,389.0,293.0,2.1
+Event Driven,2015Q2,406.0,297.0,2.3
+Event Driven,2015Q3,363.0,268.0,2.2
+Event Driven,2015Q4,309.0,225.0,2.1
+Event Driven,2016Q1,294.0,212.0,2.1
+Event Driven,2016Q2,255.0,188.0,2.1
+Event Driven,2016Q3,273.0,205.0,2.0
+Event Driven,2016Q4,270.0,201.0,2.0
+Event Driven,2017Q1,266.0,198.0,2.2
+Event Driven,2017Q2,286.0,212.0,2.0
+Event Driven,2017Q3,295.0,222.0,2.0
+Event Driven,2017Q4,288.0,219.0,2.0
+Event Driven,2018Q1,277.0,211.0,2.0
+Event Driven,2018Q2,273.0,210.0,1.9
+Event Driven,2018Q3,274.0,210.0,1.9
+Event Driven,2018Q4,247.0,195.0,1.8
+Event Driven,2019Q1,244.0,193.0,1.8
+Event Driven,2019Q2,279.0,209.0,2.0
+Event Driven,2019Q3,244.0,192.0,1.9
+Event Driven,2019Q4,254.0,195.0,1.9
+Event Driven,2020Q1,217.0,160.0,1.9
+Event Driven,2020Q2,249.0,183.0,1.8
+Event Driven,2020Q3,249.0,188.0,1.8
+Event Driven,2020Q4,269.0,200.0,1.9
+Event Driven,2021Q1,328.0,228.0,2.0
+Event Driven,2021Q2,338.0,233.0,2.1
+Event Driven,2021Q3,335.0,243.0,2.0
+Event Driven,2021Q4,343.0,250.0,1.9
+Event Driven,2022Q1,353.0,252.0,1.9
+Event Driven,2022Q2,321.0,229.0,2.0
+Event Driven,2022Q3,299.0,223.0,1.8
+Event Driven,2022Q4,292.0,218.0,1.8
+Event Driven,2023Q1,295.0,226.0,2.1
+Event Driven,2023Q2,287.0,213.0,2.1
+Event Driven,2023Q3,266.0,207.0,1.9
+Event Driven,2023Q4,264.0,206.0,1.8
+Event Driven,2024Q1,254.0,204.0,1.7
+Event Driven,2024Q2,254.0,202.0,1.7
+Event Driven,2024Q3,271.0,216.0,1.7
+Event Driven,2024Q4,248.0,193.0,1.7
+Event Driven,2025Q1,273.0,188.0,1.7
+Investment in other funds,2013Q1,24.0,22.0,1.4
+Investment in other funds,2013Q2,24.0,22.0,1.4
+Investment in other funds,2013Q3,26.0,24.0,1.5
+Investment in other funds,2013Q4,54.0,51.0,2.4
+Investment in other funds,2014Q1,58.0,54.0,2.4
+Investment in other funds,2014Q2,59.0,54.0,2.5
+Investment in other funds,2014Q3,70.0,62.0,2.8
+Investment in other funds,2014Q4,64.0,56.0,1.9
+Investment in other funds,2015Q1,59.0,54.0,1.7
+Investment in other funds,2015Q2,54.0,49.0,1.7
+Investment in other funds,2015Q3,52.0,47.0,1.4
+Investment in other funds,2015Q4,48.0,43.0,1.5
+Investment in other funds,2016Q1,38.0,35.0,1.9
+Investment in other funds,2016Q2,36.0,34.0,1.4
+Investment in other funds,2016Q3,38.0,35.0,1.5
+Investment in other funds,2016Q4,38.0,35.0,1.4
+Investment in other funds,2017Q1,37.0,34.0,1.7
+Investment in other funds,2017Q2,21.0,20.0,1.6
+Investment in other funds,2017Q3,,,
+Investment in other funds,2017Q4,25.0,24.0,1.7
+Investment in other funds,2018Q1,27.0,22.0,2.6
+Investment in other funds,2018Q2,24.0,22.0,2.4
+Investment in other funds,2018Q3,32.0,28.0,3.6
+Investment in other funds,2018Q4,95.0,20.0,14.8
+Investment in other funds,2019Q1,102.0,23.0,12.0
+Investment in other funds,2019Q2,25.0,22.0,2.4
+Investment in other funds,2019Q3,103.0,27.0,10.3
+Investment in other funds,2019Q4,26.0,22.0,1.9
+Investment in other funds,2020Q1,36.0,30.0,1.8
+Investment in other funds,2020Q2,29.0,22.0,2.0
+Investment in other funds,2020Q3,28.0,22.0,2.0
+Investment in other funds,2020Q4,28.0,23.0,2.1
+Investment in other funds,2021Q1,20.0,16.0,1.9
+Investment in other funds,2021Q2,28.0,22.0,2.9
+Investment in other funds,2021Q3,28.0,21.0,3.3
+Investment in other funds,2021Q4,46.0,36.0,3.3
+Investment in other funds,2022Q1,48.0,39.0,2.8
+Investment in other funds,2022Q2,59.0,39.0,4.1
+Investment in other funds,2022Q3,51.0,37.0,4.0
+Investment in other funds,2022Q4,57.0,44.0,3.0
+Investment in other funds,2023Q1,59.0,44.0,3.7
+Investment in other funds,2023Q2,58.0,40.0,3.8
+Investment in other funds,2023Q3,65.0,42.0,3.8
+Investment in other funds,2023Q4,44.0,28.0,3.6
+Investment in other funds,2024Q1,39.0,30.0,3.0
+Investment in other funds,2024Q2,40.0,30.0,3.0
+Investment in other funds,2024Q3,41.0,31.0,3.2
+Investment in other funds,2024Q4,39.0,29.0,3.0
+Investment in other funds,2025Q1,55.0,41.0,2.6
+Macro,2013Q1,521.0,222.0,18.1
+Macro,2013Q2,544.0,219.0,19.3
+Macro,2013Q3,521.0,204.0,18.9
+Macro,2013Q4,512.0,226.0,17.5
+Macro,2014Q1,547.0,223.0,17.4
+Macro,2014Q2,558.0,238.0,16.6
+Macro,2014Q3,596.0,232.0,18.0
+Macro,2014Q4,606.0,239.0,16.0
+Macro,2015Q1,572.0,242.0,16.0
+Macro,2015Q2,533.0,235.0,14.8
+Macro,2015Q3,575.0,230.0,15.9
+Macro,2015Q4,507.0,203.0,13.8
+Macro,2016Q1,534.0,188.0,14.9
+Macro,2016Q2,662.0,209.0,14.9
+Macro,2016Q3,668.0,212.0,11.5
+Macro,2016Q4,685.0,207.0,13.6
+Macro,2017Q1,874.0,230.0,17.7
+Macro,2017Q2,753.0,210.0,18.1
+Macro,2017Q3,769.0,198.0,20.6
+Macro,2017Q4,763.0,204.0,21.5
+Macro,2018Q1,854.0,220.0,26.8
+Macro,2018Q2,922.0,222.0,27.7
+Macro,2018Q3,886.0,202.0,23.8
+Macro,2018Q4,718.0,183.0,24.6
+Macro,2019Q1,808.0,194.0,28.0
+Macro,2019Q2,816.0,183.0,29.1
+Macro,2019Q3,775.0,184.0,25.7
+Macro,2019Q4,684.0,160.0,27.6
+Macro,2020Q1,706.0,160.0,26.7
+Macro,2020Q2,583.0,157.0,20.2
+Macro,2020Q3,782.0,171.0,32.5
+Macro,2020Q4,834.0,183.0,33.1
+Macro,2021Q1,832.0,184.0,37.3
+Macro,2021Q2,946.0,199.0,36.9
+Macro,2021Q3,940.0,198.0,34.6
+Macro,2021Q4,785.0,187.0,32.9
+Macro,2022Q1,929.0,207.0,33.0
+Macro,2022Q2,888.0,205.0,29.2
+Macro,2022Q3,921.0,204.0,28.6
+Macro,2022Q4,936.0,191.0,34.4
+Macro,2023Q1,925.0,185.0,34.3
+Macro,2023Q2,1009.0,181.0,36.8
+Macro,2023Q3,1027.0,180.0,37.8
+Macro,2023Q4,1096.0,193.0,39.7
+Macro,2024Q1,1173.0,188.0,44.3
+Macro,2024Q2,1071.0,173.0,43.0
+Macro,2024Q3,1366.0,190.0,46.7
+Macro,2024Q4,1280.0,185.0,44.4
+Macro,2025Q1,1618.0,195.0,50.0
+Managed Futures/CTA,2013Q1,46.0,42.0,11.9
+Managed Futures/CTA,2013Q2,43.0,39.0,7.2
+Managed Futures/CTA,2013Q3,44.0,39.0,10.2
+Managed Futures/CTA,2013Q4,48.0,42.0,10.8
+Managed Futures/CTA,2014Q1,49.0,40.0,7.4
+Managed Futures/CTA,2014Q2,46.0,38.0,10.3
+Managed Futures/CTA,2014Q3,48.0,38.0,10.4
+Managed Futures/CTA,2014Q4,51.0,43.0,8.6
+Managed Futures/CTA,2015Q1,51.0,44.0,7.8
+Managed Futures/CTA,2015Q2,50.0,42.0,10.1
+Managed Futures/CTA,2015Q3,41.0,34.0,14.3
+Managed Futures/CTA,2015Q4,54.0,46.0,10.9
+Managed Futures/CTA,2016Q1,48.0,40.0,9.8
+Managed Futures/CTA,2016Q2,67.0,55.0,7.3
+Managed Futures/CTA,2016Q3,67.0,57.0,8.2
+Managed Futures/CTA,2016Q4,63.0,54.0,7.3
+Managed Futures/CTA,2017Q1,67.0,57.0,8.0
+Managed Futures/CTA,2017Q2,75.0,60.0,9.5
+Managed Futures/CTA,2017Q3,72.0,60.0,8.4
+Managed Futures/CTA,2017Q4,76.0,61.0,10.0
+Managed Futures/CTA,2018Q1,70.0,60.0,8.4
+Managed Futures/CTA,2018Q2,80.0,62.0,10.5
+Managed Futures/CTA,2018Q3,70.0,53.0,14.0
+Managed Futures/CTA,2018Q4,70.0,53.0,9.7
+Managed Futures/CTA,2019Q1,83.0,60.0,17.9
+Managed Futures/CTA,2019Q2,88.0,61.0,19.9
+Managed Futures/CTA,2019Q3,82.0,56.0,19.8
+Managed Futures/CTA,2019Q4,76.0,55.0,18.5
+Managed Futures/CTA,2020Q1,71.0,50.0,14.6
+Managed Futures/CTA,2020Q2,70.0,50.0,17.4
+Managed Futures/CTA,2020Q3,72.0,49.0,20.9
+Managed Futures/CTA,2020Q4,71.0,49.0,19.7
+Managed Futures/CTA,2021Q1,72.0,48.0,19.2
+Managed Futures/CTA,2021Q2,81.0,54.0,21.4
+Managed Futures/CTA,2021Q3,91.0,60.0,22.9
+Managed Futures/CTA,2021Q4,90.0,63.0,16.9
+Managed Futures/CTA,2022Q1,106.0,71.0,15.0
+Managed Futures/CTA,2022Q2,139.0,73.0,16.5
+Managed Futures/CTA,2022Q3,131.0,80.0,14.0
+Managed Futures/CTA,2022Q4,109.0,74.0,14.3
+Managed Futures/CTA,2023Q1,133.0,84.0,12.1
+Managed Futures/CTA,2023Q2,128.0,83.0,17.1
+Managed Futures/CTA,2023Q3,124.0,75.0,18.6
+Managed Futures/CTA,2023Q4,91.0,60.0,14.8
+Managed Futures/CTA,2024Q1,110.0,59.0,22.1
+Managed Futures/CTA,2024Q2,116.0,61.0,24.9
+Managed Futures/CTA,2024Q3,132.0,53.0,26.4
+Managed Futures/CTA,2024Q4,122.0,66.0,22.5
+Managed Futures/CTA,2025Q1,123.0,60.0,21.1
+Multi-Strategy,2013Q1,521.0,297.0,6.0
+Multi-Strategy,2013Q2,522.0,291.0,5.8
+Multi-Strategy,2013Q3,557.0,300.0,7.5
+Multi-Strategy,2013Q4,545.0,316.0,5.7
+Multi-Strategy,2014Q1,615.0,321.0,6.4
+Multi-Strategy,2014Q2,645.0,336.0,6.1
+Multi-Strategy,2014Q3,617.0,338.0,7.0
+Multi-Strategy,2014Q4,575.0,320.0,5.5
+Multi-Strategy,2015Q1,584.0,321.0,5.6
+Multi-Strategy,2015Q2,839.0,349.0,7.7
+Multi-Strategy,2015Q3,762.0,342.0,7.3
+Multi-Strategy,2015Q4,562.0,324.0,6.1
+Multi-Strategy,2016Q1,609.0,314.0,7.0
+Multi-Strategy,2016Q2,573.0,319.0,7.1
+Multi-Strategy,2016Q3,822.0,336.0,10.9
+Multi-Strategy,2016Q4,909.0,382.0,10.1
+Multi-Strategy,2017Q1,796.0,360.0,7.9
+Multi-Strategy,2017Q2,828.0,382.0,7.9
+Multi-Strategy,2017Q3,850.0,373.0,9.0
+Multi-Strategy,2017Q4,865.0,402.0,8.6
+Multi-Strategy,2018Q1,887.0,405.0,9.7
+Multi-Strategy,2018Q2,839.0,385.0,8.4
+Multi-Strategy,2018Q3,751.0,328.0,8.4
+Multi-Strategy,2018Q4,773.0,340.0,8.7
+Multi-Strategy,2019Q1,748.0,321.0,9.1
+Multi-Strategy,2019Q2,705.0,283.0,9.8
+Multi-Strategy,2019Q3,521.0,276.0,10.1
+Multi-Strategy,2019Q4,652.0,287.0,11.5
+Multi-Strategy,2020Q1,653.0,290.0,10.3
+Multi-Strategy,2020Q2,514.0,253.0,9.4
+Multi-Strategy,2020Q3,766.0,305.0,10.3
+Multi-Strategy,2020Q4,1001.0,332.0,12.4
+Multi-Strategy,2021Q1,939.0,306.0,14.7
+Multi-Strategy,2021Q2,993.0,310.0,16.1
+Multi-Strategy,2021Q3,1070.0,324.0,16.2
+Multi-Strategy,2021Q4,1131.0,333.0,16.0
+Multi-Strategy,2022Q1,1108.0,354.0,14.9
+Multi-Strategy,2022Q2,1183.0,391.0,13.2
+Multi-Strategy,2022Q3,1276.0,435.0,11.0
+Multi-Strategy,2022Q4,1363.0,392.0,14.0
+Multi-Strategy,2023Q1,1490.0,412.0,14.1
+Multi-Strategy,2023Q2,1563.0,399.0,14.8
+Multi-Strategy,2023Q3,1704.0,424.0,15.6
+Multi-Strategy,2023Q4,1213.0,309.0,14.1
+Multi-Strategy,2024Q1,1728.0,402.0,16.5
+Multi-Strategy,2024Q2,1595.0,309.0,22.8
+Multi-Strategy,2024Q3,1604.0,363.0,17.4
+Multi-Strategy,2024Q4,1796.0,397.0,18.1
+Multi-Strategy,2025Q1,753.0,252.0,10.2
+Other,2013Q1,582.0,375.0,3.3
+Other,2013Q2,598.0,388.0,4.0
+Other,2013Q3,638.0,426.0,3.8
+Other,2013Q4,682.0,449.0,3.9
+Other,2014Q1,703.0,457.0,4.0
+Other,2014Q2,747.0,480.0,3.9
+Other,2014Q3,778.0,500.0,3.9
+Other,2014Q4,781.0,514.0,3.8
+Other,2015Q1,850.0,555.0,3.6
+Other,2015Q2,679.0,516.0,3.0
+Other,2015Q3,778.0,496.0,3.8
+Other,2015Q4,737.0,497.0,3.8
+Other,2016Q1,785.0,504.0,4.1
+Other,2016Q2,768.0,487.0,4.5
+Other,2016Q3,804.0,509.0,4.6
+Other,2016Q4,793.0,497.0,4.7
+Other,2017Q1,791.0,500.0,5.0
+Other,2017Q2,880.0,546.0,5.3
+Other,2017Q3,928.0,569.0,5.4
+Other,2017Q4,969.0,583.0,5.4
+Other,2018Q1,913.0,580.0,5.0
+Other,2018Q2,932.0,592.0,4.4
+Other,2018Q3,1043.0,617.0,4.7
+Other,2018Q4,960.0,574.0,4.5
+Other,2019Q1,1049.0,634.0,4.4
+Other,2019Q2,1216.0,691.0,4.7
+Other,2019Q3,1107.0,676.0,4.3
+Other,2019Q4,1161.0,688.0,4.3
+Other,2020Q1,1084.0,636.0,4.6
+Other,2020Q2,1104.0,679.0,4.1
+Other,2020Q3,958.0,644.0,3.4
+Other,2020Q4,912.0,620.0,3.2
+Other,2021Q1,989.0,687.0,3.1
+Other,2021Q2,1063.0,746.0,3.2
+Other,2021Q3,1080.0,734.0,3.2
+Other,2021Q4,1163.0,794.0,3.1
+Other,2022Q1,1166.0,808.0,3.1
+Other,2022Q2,1130.0,780.0,2.9
+Other,2022Q3,1070.0,728.0,2.9
+Other,2022Q4,1104.0,748.0,2.9
+Other,2023Q1,1143.0,776.0,2.7
+Other,2023Q2,1120.0,780.0,2.7
+Other,2023Q3,1068.0,738.0,2.7
+Other,2023Q4,1134.0,778.0,2.7
+Other,2024Q1,1148.0,795.0,2.6
+Other,2024Q2,1164.0,803.0,2.7
+Other,2024Q3,1283.0,846.0,3.0
+Other,2024Q4,1257.0,804.0,3.2
+Other,2025Q1,1269.0,813.0,3.0
+Relative Value,2013Q1,736.0,144.0,27.2
+Relative Value,2013Q2,759.0,146.0,17.6
+Relative Value,2013Q3,740.0,151.0,17.6
+Relative Value,2013Q4,733.0,172.0,14.1
+Relative Value,2014Q1,767.0,186.0,12.8
+Relative Value,2014Q2,828.0,192.0,14.8
+Relative Value,2014Q3,998.0,206.0,16.1
+Relative Value,2014Q4,917.0,213.0,14.4
+Relative Value,2015Q1,1111.0,231.0,15.6
+Relative Value,2015Q2,859.0,204.0,13.4
+Relative Value,2015Q3,844.0,186.0,15.3
+Relative Value,2015Q4,950.0,220.0,15.0
+Relative Value,2016Q1,948.0,210.0,16.1
+Relative Value,2016Q2,1004.0,212.0,16.9
+Relative Value,2016Q3,766.0,184.0,16.9
+Relative Value,2016Q4,695.0,171.0,16.4
+Relative Value,2017Q1,788.0,170.0,19.1
+Relative Value,2017Q2,850.0,169.0,17.6
+Relative Value,2017Q3,885.0,176.0,18.5
+Relative Value,2017Q4,781.0,167.0,18.2
+Relative Value,2018Q1,882.0,177.0,20.9
+Relative Value,2018Q2,980.0,191.0,19.9
+Relative Value,2018Q3,976.0,208.0,19.0
+Relative Value,2018Q4,1160.0,214.0,21.4
+Relative Value,2019Q1,1182.0,218.0,22.2
+Relative Value,2019Q2,1287.0,216.0,24.0
+Relative Value,2019Q3,1486.0,260.0,23.0
+Relative Value,2019Q4,1454.0,259.0,24.2
+Relative Value,2020Q1,1516.0,241.0,25.5
+Relative Value,2020Q2,1437.0,285.0,22.6
+Relative Value,2020Q3,1400.0,289.0,19.6
+Relative Value,2020Q4,1043.0,183.0,23.6
+Relative Value,2021Q1,1017.0,183.0,24.9
+Relative Value,2021Q2,1125.0,197.0,23.3
+Relative Value,2021Q3,1380.0,197.0,26.4
+Relative Value,2021Q4,1379.0,198.0,27.1
+Relative Value,2022Q1,1270.0,210.0,25.4
+Relative Value,2022Q2,1315.0,201.0,24.8
+Relative Value,2022Q3,1213.0,196.0,23.8
+Relative Value,2022Q4,1082.0,182.0,21.3
+Relative Value,2023Q1,1028.0,178.0,23.1
+Relative Value,2023Q2,1192.0,192.0,25.5
+Relative Value,2023Q3,1136.0,182.0,25.4
+Relative Value,2023Q4,1836.0,267.0,27.4
+Relative Value,2024Q1,1274.0,193.0,26.5
+Relative Value,2024Q2,1381.0,190.0,30.6
+Relative Value,2024Q3,1469.0,203.0,31.4
+Relative Value,2024Q4,1441.0,199.0,29.3
+Relative Value,2025Q1,2321.0,304.0,32.4

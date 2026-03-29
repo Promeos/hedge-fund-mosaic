@@ -8,6 +8,7 @@ Produces daily and quarterly summaries by asset class, clearing status, and prod
 Data: ~1,825 daily files across 5 asset classes (2025-03-13 onward).
 """
 
+import csv
 import gc
 import os
 import sys
@@ -107,7 +108,10 @@ def parse_single_zip(filepath):
                             try:
                                 notional_val = float(raw)
                                 if notional_val > 1e11:
-                                    print(f"  WARN: notional {notional_val:.0f} exceeds $100B cap, zeroed", file=sys.stderr)
+                                    print(
+                                        f"  WARN: notional {notional_val:.0f} exceeds $100B cap, zeroed",
+                                        file=sys.stderr,
+                                    )
                                     notional_val = 0.0
                             except ValueError:
                                 pass
@@ -180,21 +184,76 @@ SUMMARY_FIELDS = [
     "avg_trade_size_bn",
 ]
 
+LEGACY_SUMMARY_FIELDS = [
+    "date",
+    "asset_class",
+    "trade_count",
+    "total_notional_bn",
+    "usd_notional_bn",
+    "cleared_count",
+    "cleared_notional_bn",
+    "uncleared_notional_bn",
+    "cleared_pct",
+    "pb_count",
+    "pb_pct",
+    "block_count",
+    "block_pct",
+    "cleared_notional_pct",
+]
+
+
+def _canonicalize_summary_row(row):
+    """Map legacy or current DTCC summary rows onto the canonical schema."""
+    if len(row) == len(SUMMARY_FIELDS):
+        return dict(zip(SUMMARY_FIELDS, row))
+
+    if len(row) == len(LEGACY_SUMMARY_FIELDS):
+        data = dict(zip(LEGACY_SUMMARY_FIELDS, row))
+        trade_count = pd.to_numeric(data.get("trade_count"), errors="coerce")
+        total_notional = pd.to_numeric(data.get("total_notional_bn"), errors="coerce")
+        data["avg_trade_size_bn"] = total_notional / trade_count if pd.notna(trade_count) and trade_count > 0 else 0
+        return {field: data.get(field, "") for field in SUMMARY_FIELDS}
+
+    return None
+
+
+def _load_summary_rows(summary_path):
+    """Read a possibly mixed-schema DTCC summary CSV without failing on old rows."""
+    if not os.path.exists(summary_path):
+        return []
+
+    rows = []
+    with open(summary_path, newline="") as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader, None)  # header
+        for row in reader:
+            canonical = _canonicalize_summary_row(row)
+            if canonical is not None:
+                rows.append(canonical)
+
+    return rows
+
 
 def _clean_existing_summary(summary_path):
     """Deduplicate resume state by (date, asset_class) and backfill derived columns."""
     if not os.path.exists(summary_path):
-        return pd.DataFrame(columns=SUMMARY_FIELDS + ["cleared_notional_pct"])
+        return pd.DataFrame(columns=SUMMARY_FIELDS)
 
-    daily = pd.read_csv(summary_path)
+    rows = _load_summary_rows(summary_path)
+    daily = pd.DataFrame(rows, columns=SUMMARY_FIELDS)
     if daily.empty:
         return daily
 
+    numeric_cols = [col for col in SUMMARY_FIELDS if col not in {"date", "asset_class"}]
+    for col in numeric_cols:
+        daily[col] = pd.to_numeric(daily[col], errors="coerce")
     daily = daily.sort_values(["date", "asset_class"])
     daily = daily.drop_duplicates(subset=["date", "asset_class"], keep="last")
     if "cleared_notional_pct" not in daily.columns:
         daily["cleared_notional_pct"] = daily["cleared_notional_bn"] / daily["total_notional_bn"]
-    daily.to_csv(summary_path, index=False)
+    if "avg_trade_size_bn" not in daily.columns:
+        daily["avg_trade_size_bn"] = daily["total_notional_bn"] / daily["trade_count"]
+    daily.to_csv(summary_path, index=False, columns=SUMMARY_FIELDS)
     return daily
 
 
@@ -214,8 +273,6 @@ def _validate_row(summary):
 
 def parse_all_dtcc(data_dir=None, output_dir=None):
     """Parse all DTCC cumulative ZIP files, streaming rows directly to CSV."""
-    import csv
-
     if data_dir is None:
         data_dir = DATA_DIR
     if output_dir is None:
@@ -293,12 +350,7 @@ def parse_all_dtcc(data_dir=None, output_dir=None):
     print(f"  Saved dtcc_daily_summary.csv ({total_rows} rows)", flush=True)
 
     # --- Quarterly aggregation (lightweight read of the flat CSV) ---
-    daily = pd.read_csv(summary_path)
-    daily = daily.sort_values(["date", "asset_class"])
-    daily = daily.drop_duplicates(subset=["date", "asset_class"], keep="last")
-    if "cleared_notional_pct" not in daily.columns:
-        daily["cleared_notional_pct"] = daily["cleared_notional_bn"] / daily["total_notional_bn"]
-    daily.to_csv(summary_path, index=False)
+    daily = _clean_existing_summary(summary_path)
 
     daily["date"] = pd.to_datetime(daily["date"])
     daily["quarter"] = daily["date"].dt.to_period("Q").astype(str)

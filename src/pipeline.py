@@ -5,6 +5,7 @@ Usage:
     python -m src.pipeline --fetch      # fetch only
     python -m src.pipeline --parse      # parse only
     python -m src.pipeline --analyze    # analyze only
+    python -m src.pipeline --artifacts  # regenerate public figures, reports, notebook
 """
 
 import argparse
@@ -32,6 +33,7 @@ def step_fetch():
         fetch_cftc_data,
         fetch_hedge_fund_data,
         fetch_vix_data,
+        rebuild_13f_aggregate,
     )
     from src.data.fetch_dtcc import fetch_all_dtcc_reports
     from src.data.fetch_fcm import fetch_all_fcm_reports
@@ -55,14 +57,14 @@ def step_fetch():
     fetch_vix_data(fred, cache_path=os.path.join(RAW_DIR, "vix_quarterly.csv"))
 
     print("\n[3/7] SEC EDGAR — 13F Holdings")
-    holdings = []
     for fund_name, cik in HEDGE_FUND_CIKS.items():
         df = fetch_13f_holdings(cik, fund_name, cache_dir=RAW_DIR)
-        if not df.empty and "value_thousands" in df.columns:
-            holdings.append(df)
+        if df.empty:
+            print(f"  No 13F holdings captured for {fund_name}")
         time.sleep(0.2)
-    if holdings:
-        pd.concat(holdings, ignore_index=True).to_csv(os.path.join(RAW_DIR, "13f_all_holdings.csv"), index=False)
+    rebuilt = rebuild_13f_aggregate(RAW_DIR, expected_funds=HEDGE_FUND_CIKS)
+    if rebuilt.empty:
+        print("  Could not rebuild aggregate 13F cache from fetched per-fund files")
 
     print("\n[4/7] CFTC — Commitments of Traders")
     fetch_cftc_data(cache_path=os.path.join(RAW_DIR, "cftc_cot.csv"))
@@ -106,13 +108,14 @@ def step_parse():
 
 
 def step_analyze():
-    """Compute derived metrics and run cross-source analysis."""
+    """Compute derived metrics and run analysis reports used by public artifacts."""
+    from src.analysis.advanced import run_all_advanced
     from src.analysis.cross_source import run_full_analysis
     from src.analysis.metrics import compute_derived_metrics
 
     balance_sheet_path = os.path.join(RAW_DIR, "hedge_fund_balance_sheet_fred.csv")
     if os.path.exists(balance_sheet_path):
-        print("[1/2] Computing derived metrics")
+        print("[1/3] Computing derived metrics")
         df = pd.read_csv(balance_sheet_path, index_col=0, parse_dates=True)
         df = compute_derived_metrics(df)
         canonical_path = os.path.join(PROCESSED_DIR, "hedge_fund_analysis.csv")
@@ -122,29 +125,52 @@ def step_analyze():
         print(f"  Saved {len(df)} quarters to data/processed/hedge_fund_analysis.csv")
         print("  Saved compatibility copy to data/processed/hedge_fund_metrics.csv")
     else:
-        print("[1/2] Skipped metrics — no balance sheet data found. Run --fetch first.")
+        print("[1/3] Skipped metrics — no balance sheet data found. Run --fetch first.")
 
-    print("\n[2/2] Cross-source analysis")
+    print("\n[2/3] Cross-source analysis")
     try:
-        run_full_analysis(save=True)
+        cross_results = run_full_analysis(save=True)
     except Exception as e:
         print(f"  ERROR: Cross-source analysis failed — {e}")
         raise
 
+    print("\n[3/3] Advanced analysis")
+    try:
+        advanced_results = run_all_advanced(save=True)
+    except Exception as e:
+        print(f"  ERROR: Advanced analysis failed — {e}")
+        raise
 
-def main():
+    return {
+        "cross_source": cross_results,
+        "advanced": advanced_results,
+    }
+
+
+def step_artifacts(analysis_results=None):
+    """Regenerate public figures, rendered notebook, and provenance artifacts."""
+    from src.artifacts import refresh_public_artifacts
+
+    print("[1/1] Public artifacts")
+    return refresh_public_artifacts(analysis_results=analysis_results)
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Hedge Fund Mosaic pipeline")
     parser.add_argument("--fetch", action="store_true", help="Fetch raw data only")
     parser.add_argument("--parse", action="store_true", help="Parse raw data only")
     parser.add_argument("--analyze", action="store_true", help="Run analysis only")
-    args = parser.parse_args()
+    parser.add_argument("--artifacts", action="store_true", help="Regenerate public figures, reports, and notebook")
+    args = parser.parse_args(argv)
 
     # If no flags, run everything
-    run_all = not (args.fetch or args.parse or args.analyze)
+    run_all = not (args.fetch or args.parse or args.analyze or args.artifacts)
 
     print("=" * 60)
     print("HEDGE FUND MOSAIC PIPELINE")
     print("=" * 60)
+
+    analysis_results = None
 
     if run_all or args.fetch:
         print("\n>>> FETCH\n")
@@ -156,7 +182,11 @@ def main():
 
     if run_all or args.analyze:
         print("\n>>> ANALYZE\n")
-        step_analyze()
+        analysis_results = step_analyze()
+
+    if run_all or args.artifacts:
+        print("\n>>> ARTIFACTS\n")
+        step_artifacts(analysis_results=analysis_results)
 
     print("\n" + "=" * 60)
     print("DONE")

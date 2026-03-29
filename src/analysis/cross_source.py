@@ -8,6 +8,8 @@ import pandas as pd
 from scipy import stats
 from statsmodels.tsa.stattools import adfuller, coint, grangercausalitytests
 
+from src.data.fetch import HEDGE_FUND_CIKS, load_best_13f_holdings, normalize_13f_holdings
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 PROCESSED = os.path.join(DATA_DIR, "processed")
 RAW = os.path.join(DATA_DIR, "raw")
@@ -30,28 +32,31 @@ def load_all_sources():
     sources = {}
 
     file_map = {
-        "z1": (PROCESSED, "hedge_fund_analysis.csv"),
-        "form_pf_gav": (PROCESSED, "form_pf_gav_nav.csv"),
-        "form_pf_concentration": (PROCESSED, "form_pf_concentration.csv"),
-        "form_pf_leverage_dist": (PROCESSED, "form_pf_leverage_dist.csv"),
-        "form_pf_notional": (PROCESSED, "form_pf_notional.csv"),
-        "form_pf_liquidity": (PROCESSED, "form_pf_liquidity.csv"),
-        "form_pf_strategy": (PROCESSED, "form_pf_strategy.csv"),
-        "swaps_weekly": (PROCESSED, "swaps_weekly.csv"),
-        "swaps_quarterly": (PROCESSED, "swaps_quarterly.csv"),
-        "fcm": (PROCESSED, "fcm_quarterly.csv"),
-        "fcm_monthly": (PROCESSED, "fcm_monthly_industry.csv"),
-        "fcm_concentration": (PROCESSED, "fcm_concentration.csv"),
-        "vix": (RAW, "vix_quarterly.csv"),
-        "cot": (RAW, "cftc_cot.csv"),
-        "dtcc": (PROCESSED, "dtcc_daily_summary.csv"),
+        "z1": [(PROCESSED, "hedge_fund_analysis.csv")],
+        "form_pf_gav": [(PROCESSED, "form_pf_gav_nav.csv")],
+        "form_pf_concentration": [(PROCESSED, "form_pf_concentration.csv")],
+        "form_pf_leverage_dist": [(PROCESSED, "form_pf_leverage_dist.csv")],
+        "form_pf_notional": [(PROCESSED, "form_pf_notional.csv")],
+        "form_pf_liquidity": [(PROCESSED, "form_pf_liquidity.csv")],
+        "form_pf_strategy": [(PROCESSED, "form_pf_strategy.csv")],
+        "swaps_weekly": [(PROCESSED, "swaps_weekly.csv")],
+        "swaps_quarterly": [(PROCESSED, "swaps_quarterly.csv")],
+        "fcm": [(PROCESSED, "fcm_quarterly.csv")],
+        "fcm_monthly": [(PROCESSED, "fcm_monthly_industry.csv")],
+        "fcm_concentration": [(PROCESSED, "fcm_concentration.csv")],
+        "vix": [(PROCESSED, "vix_quarterly.csv"), (RAW, "vix_quarterly.csv")],
+        "cot": [(PROCESSED, "cftc_cot.csv"), (RAW, "cftc_cot.csv")],
+        "dtcc": [(PROCESSED, "dtcc_daily_summary.csv")],
     }
 
-    for key, (directory, filename) in file_map.items():
-        path = os.path.join(directory, filename)
-        if os.path.exists(path):
+    for key, candidates in file_map.items():
+        for directory, filename in candidates:
+            path = os.path.join(directory, filename)
+            if not os.path.exists(path):
+                continue
             try:
                 sources[key] = pd.read_csv(path)
+                break
             except Exception as exc:
                 warnings.warn(f"Failed to load {filename}: {exc}")
         # silently skip missing files
@@ -759,7 +764,9 @@ def test_h6_liquidity_vix(sources):
                 f"(high-VIX={high_mismatch.mean():.3f}, low-VIX={low_mismatch.mean():.3f})"
             )
         else:
-            interp = f"No significant difference (high-VIX={high_mismatch.mean():.3f}, low-VIX={low_mismatch.mean():.3f})"
+            interp = (
+                f"No significant difference (high-VIX={high_mismatch.mean():.3f}, low-VIX={low_mismatch.mean():.3f})"
+            )
         return _make_result(test_id, desc, statistic=t_stat, p_value=p_val, interpretation=interp)
     except Exception as exc:
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
@@ -783,9 +790,8 @@ def test_h7_concentration_correlation(sources):
         top10["date"] = _quarter_str_to_timestamp(top10["quarter"])
         top10 = top10.set_index("date").sort_index()
 
-        # Check for 13F concentration data
-        thirteenf_path = os.path.join(RAW, "13f_all_holdings.csv")
-        if not os.path.exists(thirteenf_path):
+        holdings = load_best_13f_holdings(RAW, expected_funds=HEDGE_FUND_CIKS)
+        if holdings.empty:
             # Fall back: test trend in Form PF concentration alone
             tau, p_val = stats.kendalltau(
                 np.arange(len(top10)),
@@ -796,12 +802,21 @@ def test_h7_concentration_correlation(sources):
             )
             return _make_result(test_id, desc, statistic=tau, p_value=p_val, interpretation=interp)
 
-        # If 13F data exists, compute HHI per quarter from holdings
-        holdings = pd.read_csv(thirteenf_path)
-        if "value" in holdings.columns:
-            holdings["holding_value"] = holdings["value"]
+        holdings = normalize_13f_holdings(holdings)
+
+        # Use cash equity/ETF lines for like-for-like issuer ownership, excluding
+        # puts and calls that dominate 13F notional but are not comparable to Form PF.
+        if "put_call" in holdings.columns:
+            holdings = holdings[holdings["put_call"].fillna("").eq("")].copy()
+        if holdings.empty:
+            return _make_result(test_id, desc, interpretation="13F holdings file has no non-option positions")
+
+        if "value_usd" in holdings.columns:
+            holdings["holding_value"] = pd.to_numeric(holdings["value_usd"], errors="coerce")
+        elif "value" in holdings.columns:
+            holdings["holding_value"] = pd.to_numeric(holdings["value"], errors="coerce")
         elif "value_thousands" in holdings.columns:
-            holdings["holding_value"] = holdings["value_thousands"] * 1000
+            holdings["holding_value"] = pd.to_numeric(holdings["value_thousands"], errors="coerce") * 1000
         else:
             return _make_result(test_id, desc, interpretation="13F holdings file lacks value columns")
 
@@ -814,18 +829,19 @@ def test_h7_concentration_correlation(sources):
                 return _make_result(test_id, desc, interpretation="13F holdings file lacks quarter columns")
 
         if "fund" not in holdings.columns:
-            return _make_result(test_id, desc, interpretation="13F holdings file lacks fund column for fund-level concentration")
+            return _make_result(
+                test_id, desc, interpretation="13F holdings file lacks fund column for fund-level concentration"
+            )
 
-        # Top-10 fund share by quarter from 13F (parallels Form PF Top 10 NAV share)
+        # Compare against a true fund-level concentration metric from the tracked
+        # 13F universe. Top-10 share is degenerate with only 8 funds; HHI varies.
         hhi_13f = []
         for q, grp in holdings.groupby("quarter"):
             fund_totals = grp.groupby("fund")["holding_value"].sum()
             total = fund_totals.sum()
             if total > 0 and len(fund_totals) > 0:
-                fund_totals_sorted = fund_totals.sort_values(ascending=False)
-                top_n = min(10, len(fund_totals_sorted))
-                top_share = fund_totals_sorted.iloc[:top_n].sum() / total
-                hhi_13f.append({"quarter": q, "hhi_13f": top_share})
+                shares = fund_totals / total
+                hhi_13f.append({"quarter": q, "hhi_13f": float((shares**2).sum())})
 
         if not hhi_13f:
             return _make_result(test_id, desc, interpretation="Could not compute 13F fund concentration")

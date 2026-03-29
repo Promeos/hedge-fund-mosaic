@@ -40,6 +40,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "matplotlib>=3.7",
     "seaborn>=0.12",
+    "nbclient>=0.10",
+    "nbformat>=5.10",
     "statsmodels>=0.14",
     "scipy>=1.10",
     "scikit-learn>=1.2",
@@ -74,4 +76,5 @@ known-first-party = ["src"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning:xml.etree",
+    "ignore:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning",
 ]

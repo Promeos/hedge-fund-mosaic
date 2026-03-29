@@ -1,0 +1,169 @@
+{
+  "generated_at": "2026-03-29T14:09:41.500530+00:00",
+  "git_commit_sha": "80e355142a0c4c1e31b354053565c89a79e422a0",
+  "artifact_command": "python -m src.pipeline --artifacts",
+  "input_files": [
+    {
+      "path": "data/processed/13f_holdings.csv",
+      "sha256": "d8e0e53b45b2a38db271ba95e8c7ae46a06c37de247129dfb8d0eab57252581f",
+      "size_bytes": 40392802
+    },
+    {
+      "path": "data/processed/cftc_cot.csv",
+      "sha256": "6dd1bab1c2a03443b7e169c9bcc42c04e5eb862e67bd02423ffed28b946dad0f",
+      "size_bytes": 651977
+    },
+    {
+      "path": "data/processed/dtcc_daily_summary.csv",
+      "sha256": "bc975e4ae6dfe71c3dcae44ed599439307bfabe12cc5e4b2361e668403b751b4",
+      "size_bytes": 220198
+    },
+    {
+      "path": "data/processed/dtcc_quarterly.csv",
+      "sha256": "6c4163825cda7c7e64c73eaa4777cdbe053f060a167aec3a9031a73e3a830591",
+      "size_bytes": 4710
+    },
+    {
+      "path": "data/processed/fcm_concentration.csv",
+      "sha256": "25eac8a7e7b19f480ebb5c17073904c4793720d20c94f444fe0330b3c1e09c33",
+      "size_bytes": 2466
+    },
+    {
+      "path": "data/processed/fcm_monthly_industry.csv",
+      "sha256": "1a7dafded1cdd7b2b68d7835936ea56778df01f42c21fcd6573c014a240a62a8",
+      "size_bytes": 10973
+    },
+    {
+      "path": "data/processed/form_pf_borrowing_creditor.csv",
+      "sha256": "747f31445c269da8e2d63bd17df759ef71c794fbcc89563a84a6b5ec9f958ad1",
+      "size_bytes": 7384
+    },
+    {
+      "path": "data/processed/form_pf_borrowing_detail.csv",
+      "sha256": "0f862518cdf885bd2ecbdb0bb76d6b631e1cc7878af4b56983ded709199e531b",
+      "size_bytes": 35316
+    },
+    {
+      "path": "data/processed/form_pf_concentration.csv",
+      "sha256": "08794b76251df1bef1130e301f891cbbae07692b6152c72e3ca2b6589daeb191",
+      "size_bytes": 13626
+    },
+    {
+      "path": "data/processed/form_pf_derivatives.csv",
+      "sha256": "1658a86213dd2487ab64c744e0a20e31c4b472505ca88433008aaf66e39ed832",
+      "size_bytes": 17116
+    },
+    {
+      "path": "data/processed/form_pf_gav_nav.csv",
+      "sha256": "39efb20cb97d13db3374f9bd710fd58c2a26959319721c4fc5f16fe8fe0e061f",
+      "size_bytes": 20040
+    },
+    {
+      "path": "data/processed/form_pf_liquidity.csv",
+      "sha256": "a3dc78b664efe0986b416d112ffd73eb54fb3b891ffbe4a829f5b98feb16e730",
+      "size_bytes": 42727
+    },
+    {
+      "path": "data/processed/form_pf_notional.csv",
+      "sha256": "1612eaa830e4ccd8cad4658b9ca5ec2d44d55f7ac11c2f81005a7cc3881d0fdb",
+      "size_bytes": 237768
+    },
+    {
+      "path": "data/processed/form_pf_strategy.csv",
+      "sha256": "8549ed958b166eaa203a9b2980ee2cc2b09ccdd0c8fe297e0de3ec6b6cba8382",
+      "size_bytes": 15917
+    },
+    {
+      "path": "data/processed/hedge_fund_analysis.csv",
+      "sha256": "d02e00b818ad3aabf0ec901414410301e37c26a18c3a17e3c3bcbfc1343be6d3",
+      "size_bytes": 32531
+    },
+    {
+      "path": "data/processed/swaps_weekly.csv",
+      "sha256": "d176e3dc71006f7881262803c47379d5b6131300ea0c39b643b2dbbc9b3b2b1f",
+      "size_bytes": 91516
+    },
+    {
+      "path": "data/processed/vix_quarterly.csv",
+      "sha256": "164c19c62217beea4be31e15c2b6e8329655a8a5d8355b3532f6aa3b556b07f9",
+      "size_bytes": 9100
+    }
+  ],
+  "source_coverage": {
+    "z1": {
+      "start": "2012 Q4",
+      "end": "2025 Q3",
+      "quarters": 52
+    },
+    "form_pf": {
+      "quarter": "2025Q1"
+    },
+    "creditors": {
+      "quarter": "2025Q1"
+    },
+    "swaps": {
+      "latest_date": "2026-02-20"
+    },
+    "fcm": {
+      "latest_date": "2026-01-31"
+    },
+    "13f": {
+      "report_period_start": "2024Q1",
+      "report_period_end": "2025Q4",
+      "rows": 384723,
+      "long_rows": 283362
+    }
+  },
+  "key_headline_metrics": {
+    "z1_total_assets_latest_b": 3258.408,
+    "form_pf_derivatives_latest_b": 20240.0,
+    "swaps_ir_total_latest_b": 415553.2,
+    "thirteenf_latest_long_value_b": 831.085279604,
+    "liquidity_30d_mean_gap_pct": 0.4653061224489795,
+    "leverage_adf_pvalue": 0.13882938896361313
+  },
+  "generated_outputs": {
+    "figures": [
+      "outputs/figures/asset_composition.png",
+      "outputs/figures/balance_sheet_overview.png",
+      "outputs/figures/borrowing_patterns.png",
+      "outputs/figures/clearing_rate.png",
+      "outputs/figures/concentration_trend.png",
+      "outputs/figures/correlation_heatmap.png",
+      "outputs/figures/cross_source_leverage.png",
+      "outputs/figures/debt_securities.png",
+      "outputs/figures/derivative_exposure.png",
+      "outputs/figures/dtcc_summary.png",
+      "outputs/figures/fcm_capital.png",
+      "outputs/figures/fcm_concentration.png",
+      "outputs/figures/form_pf_leverage.png",
+      "outputs/figures/granger_causality_heatmap.png",
+      "outputs/figures/liability_structure.png",
+      "outputs/figures/liquidity_mismatch_detail.png",
+      "outputs/figures/monte_carlo_z1_total_assets.png",
+      "outputs/figures/monte_carlo_z1_total_net_assets.png",
+      "outputs/figures/strategy_allocation.png",
+      "outputs/figures/strategy_hhi.png",
+      "outputs/figures/structural_breaks_pf_gav_nav_ratio.png",
+      "outputs/figures/structural_breaks_swap_ir_cleared_pct.png",
+      "outputs/figures/structural_breaks_vix_mean.png",
+      "outputs/figures/swaps_notional.png",
+      "outputs/figures/total_assets.png",
+      "outputs/figures/var_impulse_response.png"
+    ],
+    "reports": [
+      "outputs/reports/advanced_analysis.txt",
+      "outputs/reports/claims_ledger.csv",
+      "outputs/reports/cross_source_aligned.csv",
+      "outputs/reports/cross_source_metrics.csv",
+      "outputs/reports/cross_source_tests.csv",
+      "outputs/reports/executive_summary.md",
+      "outputs/reports/granger_causality_matrix.csv",
+      "outputs/reports/monte_carlo_summary.csv",
+      "outputs/reports/strategy_rotation_hhi.csv",
+      "outputs/reports/var_fevd.csv",
+      "outputs/reports/var_impulse_response.csv"
+    ],
+    "notebook": "notebooks/hedge_fund_analysis.ipynb"
+  }
+}

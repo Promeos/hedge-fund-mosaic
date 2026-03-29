@@ -15,6 +15,8 @@ from statsmodels.tsa.api import VAR
 from statsmodels.tsa.stattools import grangercausalitytests
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
+from src.data.fetch import HEDGE_FUND_CIKS, load_best_13f_holdings, normalize_13f_holdings
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 PROCESSED = os.path.join(DATA_DIR, "processed")
 RAW = os.path.join(DATA_DIR, "raw")
@@ -470,23 +472,24 @@ def liquidity_deep_dive(sources):
 
         if len(mismatches) == 2:
             merged = mismatches[0].join(mismatches[1], how="inner")
-            merged["mismatch"] = merged["investor_liquidity"] - merged["portfolio_liquidity"]
+            merged["mismatch"] = merged["portfolio_liquidity"] - merged["investor_liquidity"]
             results[f"mismatch_{period}"] = merged
 
-    # Flag dangerous quarters (mismatch > 20%)
+    # Dangerous means investors can redeem materially faster than the portfolio
+    # can be liquidated, i.e. a large negative portfolio-minus-investor gap.
     print("\nFORM PF LIQUIDITY DEEP-DIVE")
     for period in periods:
         key = f"mismatch_{period}"
         if key in results:
             mm = results[key]
-            dangerous = mm[mm["mismatch"] > 0.20]
+            dangerous = mm[mm["mismatch"] < -0.20]
             print(f"\n  {period}:")
             print(f"    Mean mismatch: {mm['mismatch'].mean():.1%}")
             print(
                 f"    Max mismatch: {mm['mismatch'].max():.1%} "
                 f"({mm['mismatch'].idxmax().date() if hasattr(mm['mismatch'].idxmax(), 'date') else mm['mismatch'].idxmax()})"
             )
-            print(f"    Dangerous quarters (>20%): {len(dangerous)}")
+            print(f"    Dangerous quarters (<-20%): {len(dangerous)}")
             if not dangerous.empty:
                 for date, row in dangerous.iterrows():
                     d = date.date() if hasattr(date, "date") else date
@@ -621,33 +624,49 @@ def fcm_concentration_analysis(sources):
 
 def thirteenf_concentration(sources):
     """Analyze 13F equity holdings concentration across top funds."""
-    path_13f = os.path.join(RAW, "13f_all_holdings.csv")
-    if not os.path.exists(path_13f):
+    holdings = load_best_13f_holdings(RAW, expected_funds=HEDGE_FUND_CIKS)
+    if holdings.empty:
         print("13F concentration: file not found")
         return {}
 
-    holdings = pd.read_csv(path_13f)
-    if "value_thousands" not in holdings.columns:
-        print("13F concentration: missing value_thousands column")
+    holdings = normalize_13f_holdings(holdings)
+
+    if "put_call" in holdings.columns:
+        holdings = holdings[holdings["put_call"].fillna("").eq("")].copy()
+    if holdings.empty:
+        print("13F concentration: no non-option holdings found")
         return {}
 
-    holdings["value"] = holdings["value_thousands"] * 1000  # to USD
+    if "value_usd" in holdings.columns:
+        holdings["value"] = pd.to_numeric(holdings["value_usd"], errors="coerce")
+    elif "value_thousands" in holdings.columns:
+        holdings["value"] = pd.to_numeric(holdings["value_thousands"], errors="coerce") * 1000
+    else:
+        print("13F concentration: missing value column")
+        return {}
+
+    if "report_period" not in holdings.columns:
+        if "filing_date" not in holdings.columns:
+            print("13F concentration: missing report period")
+            return {}
+        holdings["report_period"] = pd.to_datetime(holdings["filing_date"]).dt.to_period("Q").astype(str)
 
     # Per-fund concentration (HHI of issuers within each fund)
     fund_hhi = []
-    for (fund, date), grp in holdings.groupby(["fund", "filing_date"]):
-        total = grp["value"].sum()
+    for (fund, period), grp in holdings.groupby(["fund", "report_period"]):
+        issuer_totals = grp.groupby("issuer")["value"].sum().sort_values(ascending=False)
+        total = issuer_totals.sum()
         if total > 0:
-            shares = grp["value"] / total
+            shares = issuer_totals / total
             hhi = (shares**2).sum()
-            top_holding = grp.loc[grp["value"].idxmax(), "issuer"]
-            top_pct = grp["value"].max() / total
+            top_holding = issuer_totals.idxmax()
+            top_pct = issuer_totals.max() / total
             fund_hhi.append(
                 {
                     "fund": fund,
-                    "filing_date": date,
+                    "report_period": period,
                     "hhi": hhi,
-                    "n_positions": len(grp),
+                    "n_positions": len(issuer_totals),
                     "top_holding": top_holding,
                     "top_pct": top_pct,
                     "total_value": total,
@@ -658,13 +677,11 @@ def thirteenf_concentration(sources):
         return {}
 
     hhi_df = pd.DataFrame(fund_hhi)
-    hhi_df["filing_date"] = pd.to_datetime(hhi_df["filing_date"])
+    hhi_df["period"] = pd.PeriodIndex(hhi_df["report_period"], freq="Q")
 
     # Cross-fund overlap: which issuers appear in the most portfolios?
-    latest_date = hhi_df["filing_date"].max()
-    latest = holdings[holdings["filing_date"] == str(latest_date.date())].copy()
-    if latest.empty:
-        latest = holdings[holdings["filing_date"] == holdings["filing_date"].max()]
+    latest_period = hhi_df["period"].max()
+    latest = holdings[holdings["report_period"] == str(latest_period)].copy()
 
     issuer_counts = (
         latest.groupby("issuer")
@@ -680,9 +697,10 @@ def thirteenf_concentration(sources):
     print("\n13F HOLDINGS CONCENTRATION")
     print(f"  Funds: {hhi_df['fund'].nunique()}")
     print(f"  Filings: {len(hhi_df)}")
+    print(f"  Latest quarter: {latest_period}")
 
     # Per-fund summary at latest date
-    latest_hhi = hhi_df[hhi_df["filing_date"] == hhi_df["filing_date"].max()]
+    latest_hhi = hhi_df[hhi_df["period"] == latest_period]
     for _, row in latest_hhi.iterrows():
         print(
             f"  {row['fund']}: HHI={row['hhi']:.4f}, "
@@ -719,6 +737,7 @@ def run_all_advanced(save=True):
     aligned = align_quarterly(sources)
 
     all_results = {}
+    all_results["aligned"] = aligned
 
     # 1. Granger causality matrix
     print("\n" + "=" * 80)
@@ -909,8 +928,8 @@ def _write_report(results):
                 lines.append(f"\n  {period}:")
                 lines.append(f"    Mean mismatch: {val['mismatch'].mean():.1%}")
                 lines.append(f"    Max mismatch: {val['mismatch'].max():.1%}")
-                dangerous = val[val["mismatch"] > 0.20]
-                lines.append(f"    Dangerous quarters (>20%): {len(dangerous)}")
+                dangerous = val[val["mismatch"] < -0.20]
+                lines.append(f"    Dangerous quarters (<-20%): {len(dangerous)}")
 
     # Strategy rotation
     strat = results.get("strategy_rotation", {})

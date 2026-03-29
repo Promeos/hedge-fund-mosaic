@@ -9,8 +9,10 @@ All data is cached to data/raw/ to avoid redundant API calls.
 Rate limits: 0.2s FRED, 0.15s SEC EDGAR.
 """
 
+import argparse
 import json
 import os
+import re
 import time
 import warnings
 import xml.etree.ElementTree as ET
@@ -82,6 +84,119 @@ HEDGE_FUND_CIKS = {
     "Millennium Management": "0001273087",
     "AQR Capital Management": "0001167557",
 }
+
+FORM_13F_DOLLAR_CUTOFF = pd.Timestamp("2022-10-17")
+THIRTEENF_WINDOW_RE = re.compile(r"^13f_(?P<fund>.+)_(?P<start>\d{8})_(?P<end>\d{8})\.csv$")
+
+
+def normalize_13f_holdings(df):
+    """Backfill a canonical dollar-denominated value column for 13F holdings.
+
+    The SEC changed the XML ``value`` element from thousands to nearest dollar
+    in the October 17, 2022 Form 13F technical specification update. Older
+    holdings need to be scaled by 1,000; newer filings should not.
+    """
+    if df.empty:
+        return df.copy()
+
+    out = df.copy()
+    raw_col = "value_thousands" if "value_thousands" in out.columns else "value"
+    if raw_col not in out.columns:
+        return out
+
+    raw_values = pd.to_numeric(out[raw_col], errors="coerce")
+    if "filing_date" in out.columns:
+        filing_dates = pd.to_datetime(out["filing_date"], errors="coerce")
+    else:
+        filing_dates = pd.Series(pd.NaT, index=out.index)
+
+    if "value_unit" in out.columns:
+        value_units = out["value_unit"].astype(str).str.lower()
+        reported_in_dollars = value_units.eq("usd")
+        reported_in_thousands = value_units.eq("thousands")
+    else:
+        reported_in_dollars = filing_dates >= FORM_13F_DOLLAR_CUTOFF
+        reported_in_thousands = ~reported_in_dollars
+        reported_in_thousands = reported_in_thousands.fillna(False)
+
+    if "value_usd" not in out.columns:
+        out["value_usd"] = pd.Series(index=out.index, dtype="float64")
+
+    missing_value_usd = pd.to_numeric(out["value_usd"], errors="coerce").isna()
+    out.loc[missing_value_usd & reported_in_dollars, "value_usd"] = raw_values[missing_value_usd & reported_in_dollars]
+    out.loc[missing_value_usd & reported_in_thousands, "value_usd"] = (
+        raw_values[missing_value_usd & reported_in_thousands] * 1000
+    )
+
+    if "value_unit" not in out.columns:
+        inferred = pd.Series("unknown", index=out.index, dtype="object")
+        inferred.loc[reported_in_dollars] = "usd"
+        inferred.loc[reported_in_thousands] = "thousands"
+        out["value_unit"] = inferred
+
+    return out
+
+
+def _select_best_13f_window(cache_dir, expected_funds=None):
+    """Choose the newest complete per-fund 13F cache window available on disk."""
+    if not os.path.isdir(cache_dir):
+        return []
+
+    groups = {}
+    for filename in os.listdir(cache_dir):
+        match = THIRTEENF_WINDOW_RE.match(filename)
+        if not match:
+            continue
+        tags = (match.group("start"), match.group("end"))
+        groups.setdefault(tags, []).append(os.path.join(cache_dir, filename))
+
+    if not groups:
+        return []
+
+    expected_count = len(expected_funds) if expected_funds else None
+
+    def score(item):
+        (start_tag, end_tag), paths = item
+        count = len(paths)
+        complete = int(expected_count is not None and count >= expected_count)
+        return (complete, count, end_tag, start_tag)
+
+    _, paths = max(groups.items(), key=score)
+    return sorted(paths)
+
+
+def load_best_13f_holdings(cache_dir="data/raw", expected_funds=None):
+    """Load the newest coherent 13F holdings snapshot available locally.
+
+    Prefer the latest complete set of per-fund window caches over the aggregate
+    ``13f_all_holdings.csv`` file, which can become stale if only the per-fund
+    caches are refreshed.
+    """
+    per_fund_paths = _select_best_13f_window(cache_dir, expected_funds=expected_funds)
+    if per_fund_paths:
+        frames = [normalize_13f_holdings(pd.read_csv(path)) for path in per_fund_paths]
+        return pd.concat(frames, ignore_index=True)
+
+    aggregate_path = os.path.join(cache_dir, "13f_all_holdings.csv")
+    if os.path.exists(aggregate_path):
+        return normalize_13f_holdings(pd.read_csv(aggregate_path))
+
+    processed_path = os.path.join(os.path.dirname(cache_dir), "processed", "13f_holdings.csv")
+    if os.path.exists(processed_path):
+        return normalize_13f_holdings(pd.read_csv(processed_path))
+
+    return pd.DataFrame()
+
+
+def rebuild_13f_aggregate(cache_dir="data/raw", expected_funds=None):
+    """Rebuild ``13f_all_holdings.csv`` from the newest local per-fund caches."""
+    holdings = load_best_13f_holdings(cache_dir=cache_dir, expected_funds=expected_funds)
+    if holdings.empty:
+        return holdings
+
+    aggregate_path = os.path.join(cache_dir, "13f_all_holdings.csv")
+    holdings.to_csv(aggregate_path, index=False)
+    return holdings
 
 
 # ---------------------------------------------------------------------------
@@ -180,9 +295,11 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, en
     end_tag = end_date.replace("-", "")
     cache_path = os.path.join(cache_dir, f"13f_{fund_name.replace(' ', '_').lower()}_{start_tag}_{end_tag}.csv")
     if os.path.exists(cache_path):
-        df_cached = pd.read_csv(cache_path)
+        df_cached = normalize_13f_holdings(pd.read_csv(cache_path))
         # Only use cache if it contains actual holdings data
         if "value_thousands" in df_cached.columns:
+            if "value_usd" not in df_cached.columns or "value_unit" not in df_cached.columns:
+                df_cached.to_csv(cache_path, index=False)
             print(f"  Cached: {fund_name} ({len(df_cached)} holdings)")
             return df_cached
         else:
@@ -303,6 +420,11 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, en
                         share_type = shares_node.findtext(f"{ns}sshPrnamtType", "") if shares_node else ""
                         put_call = entry.findtext(f"{ns}putCall", "")
 
+                        value_raw = int(value) if value else 0
+                        filing_ts = pd.to_datetime(filing["filing_date"], errors="coerce")
+                        reported_in_dollars = pd.notna(filing_ts) and filing_ts >= FORM_13F_DOLLAR_CUTOFF
+                        value_usd = value_raw if reported_in_dollars else value_raw * 1000
+
                         all_holdings.append(
                             {
                                 "fund": fund_name,
@@ -311,7 +433,11 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, en
                                 "issuer": " ".join(name_of_issuer.split()),
                                 "title": " ".join(title.split()),
                                 "cusip": cusip,
-                                "value_thousands": int(value) if value else 0,
+                                # Preserve the historical column name for compatibility, but
+                                # also emit a canonical dollar-denominated value column.
+                                "value_thousands": value_raw,
+                                "value_unit": "usd" if reported_in_dollars else "thousands",
+                                "value_usd": value_usd,
                                 "shares": int(shares) if shares else 0,
                                 "share_type": share_type,
                                 "put_call": put_call,
@@ -324,7 +450,7 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, en
                 continue
 
         if all_holdings:
-            df_h = pd.DataFrame(all_holdings)
+            df_h = normalize_13f_holdings(pd.DataFrame(all_holdings))
             df_h.to_csv(cache_path, index=False)
             print(f"  Saved {len(df_h)} holdings to {cache_path}")
             return df_h
@@ -534,8 +660,42 @@ def fetch_all_fund_profiles(cache_dir="data/raw"):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fetch Hedge Fund Mosaic source data")
+    parser.add_argument("--13f", action="store_true", dest="fetch_13f_only", help="Fetch or rebuild only 13F holdings")
+    args = parser.parse_args()
+
     load_dotenv()
     FRED_API_KEY = os.getenv("FRED_API_KEY")
+    raw_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw")
+    os.makedirs(raw_dir, exist_ok=True)
+
+    if args.fetch_13f_only:
+        print("=" * 60)
+        print("FETCHING 13F HOLDINGS")
+        print("=" * 60)
+
+        holdings_list = []
+        for fund_name, cik in HEDGE_FUND_CIKS.items():
+            df_fund = fetch_13f_holdings(cik, fund_name, cache_dir=raw_dir)
+            if not df_fund.empty and "value_thousands" in df_fund.columns:
+                holdings_list.append(df_fund)
+            time.sleep(0.2)
+
+        if holdings_list:
+            df_13f = pd.concat(holdings_list, ignore_index=True)
+            df_13f = normalize_13f_holdings(df_13f)
+            df_13f.to_csv(os.path.join(raw_dir, "13f_all_holdings.csv"), index=False)
+            print(f"Total 13F holdings: {len(df_13f)} records across {df_13f['fund'].nunique()} funds")
+        else:
+            rebuilt = rebuild_13f_aggregate(cache_dir=raw_dir, expected_funds=HEDGE_FUND_CIKS)
+            if rebuilt.empty:
+                print("No 13F holdings available to rebuild aggregate cache.")
+            else:
+                print(
+                    "Rebuilt aggregate 13F cache from local per-fund files: "
+                    f"{len(rebuilt)} rows across {rebuilt['fund'].nunique()} funds"
+                )
+        exit(0)
 
     if Fred is None:
         print("ERROR: fredapi is not installed. Run `pip install -r requirements.txt`.")
@@ -546,8 +706,6 @@ if __name__ == "__main__":
         exit(1)
 
     fred = Fred(api_key=FRED_API_KEY)
-    raw_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw")
-    os.makedirs(raw_dir, exist_ok=True)
 
     print("=" * 60)
     print("FETCHING ALL DATA SOURCES")
@@ -573,7 +731,7 @@ if __name__ == "__main__":
         time.sleep(0.2)
 
     if holdings_list:
-        df_13f = pd.concat(holdings_list, ignore_index=True)
+        df_13f = normalize_13f_holdings(pd.concat(holdings_list, ignore_index=True))
         df_13f.to_csv(os.path.join(raw_dir, "13f_all_holdings.csv"), index=False)
         print(f"Total 13F holdings: {len(df_13f)} records across {df_13f['fund'].nunique()} funds")
 

@@ -15,4 +15,6 @@ scikit-learn==1.8.0
 
 # Dev
 jupyter==1.1.1
+nbclient==0.10.2
+nbformat==5.10.4
 pytest==9.0.2

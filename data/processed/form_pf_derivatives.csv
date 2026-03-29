@@ -1,0 +1,491 @@
+fund_type,quarter,derivative_value,derivative_pct_nav
+Hedge Fund,2013Q1,10336.0,3.957
+Hedge Fund,2013Q2,9578.0,3.576
+Hedge Fund,2013Q3,8586.0,3.053
+Hedge Fund,2013Q4,8783.0,2.869
+Hedge Fund,2014Q1,8853.0,2.798
+Hedge Fund,2014Q2,9423.0,2.85
+Hedge Fund,2014Q3,9863.0,2.935
+Hedge Fund,2014Q4,8911.0,2.622
+Hedge Fund,2015Q1,9514.0,2.661
+Hedge Fund,2015Q2,9028.0,2.518
+Hedge Fund,2015Q3,9252.0,2.663
+Hedge Fund,2015Q4,8423.0,2.437
+Hedge Fund,2016Q1,9128.0,2.682
+Hedge Fund,2016Q2,9305.0,2.713
+Hedge Fund,2016Q3,9340.0,2.677
+Hedge Fund,2016Q4,9139.0,2.624
+Hedge Fund,2017Q1,10179.0,2.828
+Hedge Fund,2017Q2,10096.0,2.761
+Hedge Fund,2017Q3,11364.0,3.007
+Hedge Fund,2017Q4,12132.0,3.125
+Hedge Fund,2018Q1,14206.0,3.577
+Hedge Fund,2018Q2,13378.0,3.344
+Hedge Fund,2018Q3,13564.0,3.343
+Hedge Fund,2018Q4,12646.0,3.335
+Hedge Fund,2019Q1,14151.0,3.535
+Hedge Fund,2019Q2,13066.0,3.196
+Hedge Fund,2019Q3,13564.0,3.338
+Hedge Fund,2019Q4,12766.0,3.089
+Hedge Fund,2020Q1,11973.0,3.166
+Hedge Fund,2020Q2,11044.0,2.701
+Hedge Fund,2020Q3,13741.0,3.196
+Hedge Fund,2020Q4,14158.0,3.036
+Hedge Fund,2021Q1,15227.0,3.165
+Hedge Fund,2021Q2,16250.0,3.168
+Hedge Fund,2021Q3,15855.0,3.101
+Hedge Fund,2021Q4,15492.0,3.019
+Hedge Fund,2022Q1,15596.0,3.029
+Hedge Fund,2022Q2,14510.0,2.953
+Hedge Fund,2022Q3,13747.0,2.834
+Hedge Fund,2022Q4,14431.0,2.996
+Hedge Fund,2023Q1,14726.0,3.031
+Hedge Fund,2023Q2,14944.0,3.04
+Hedge Fund,2023Q3,15232.0,3.086
+Hedge Fund,2023Q4,15154.0,3.03
+Hedge Fund,2024Q1,16680.0,3.194
+Hedge Fund,2024Q2,17472.0,3.344
+Hedge Fund,2024Q3,19261.0,3.57
+Hedge Fund,2024Q4,17967.0,3.374
+Hedge Fund,2025Q1,20240.0,3.735
+Liquidity Fund,2013Q1,,
+Liquidity Fund,2013Q2,,
+Liquidity Fund,2013Q3,,
+Liquidity Fund,2013Q4,0.0,
+Liquidity Fund,2014Q1,0.0,
+Liquidity Fund,2014Q2,0.0,
+Liquidity Fund,2014Q3,0.0,
+Liquidity Fund,2014Q4,,
+Liquidity Fund,2015Q1,,
+Liquidity Fund,2015Q2,,
+Liquidity Fund,2015Q3,,
+Liquidity Fund,2015Q4,,
+Liquidity Fund,2016Q1,,
+Liquidity Fund,2016Q2,,
+Liquidity Fund,2016Q3,,
+Liquidity Fund,2016Q4,,
+Liquidity Fund,2017Q1,,
+Liquidity Fund,2017Q2,,
+Liquidity Fund,2017Q3,,
+Liquidity Fund,2017Q4,,
+Liquidity Fund,2018Q1,,
+Liquidity Fund,2018Q2,,
+Liquidity Fund,2018Q3,,
+Liquidity Fund,2018Q4,,
+Liquidity Fund,2019Q1,,
+Liquidity Fund,2019Q2,,
+Liquidity Fund,2019Q3,,
+Liquidity Fund,2019Q4,,
+Liquidity Fund,2020Q1,,
+Liquidity Fund,2020Q2,,
+Liquidity Fund,2020Q3,,
+Liquidity Fund,2020Q4,,
+Liquidity Fund,2021Q1,,
+Liquidity Fund,2021Q2,,
+Liquidity Fund,2021Q3,,
+Liquidity Fund,2021Q4,,
+Liquidity Fund,2022Q1,,
+Liquidity Fund,2022Q2,,
+Liquidity Fund,2022Q3,,
+Liquidity Fund,2022Q4,,
+Liquidity Fund,2023Q1,,
+Liquidity Fund,2023Q2,,
+Liquidity Fund,2023Q3,,
+Liquidity Fund,2023Q4,,
+Liquidity Fund,2024Q1,,
+Liquidity Fund,2024Q2,,
+Liquidity Fund,2024Q3,,
+Liquidity Fund,2024Q4,,
+Liquidity Fund,2025Q1,,
+Other Private Fund,2013Q1,77.0,0.124
+Other Private Fund,2013Q2,80.0,0.122
+Other Private Fund,2013Q3,77.0,0.117
+Other Private Fund,2013Q4,91.0,0.111
+Other Private Fund,2014Q1,91.0,0.111
+Other Private Fund,2014Q2,101.0,0.122
+Other Private Fund,2014Q3,83.0,0.102
+Other Private Fund,2014Q4,110.0,0.125
+Other Private Fund,2015Q1,102.0,0.116
+Other Private Fund,2015Q2,105.0,0.12
+Other Private Fund,2015Q3,104.0,0.12
+Other Private Fund,2015Q4,100.0,0.114
+Other Private Fund,2016Q1,98.0,0.112
+Other Private Fund,2016Q2,96.0,0.11
+Other Private Fund,2016Q3,97.0,0.111
+Other Private Fund,2016Q4,112.0,0.115
+Other Private Fund,2017Q1,109.0,0.11
+Other Private Fund,2017Q2,108.0,0.109
+Other Private Fund,2017Q3,109.0,0.112
+Other Private Fund,2017Q4,148.0,0.137
+Other Private Fund,2018Q1,149.0,0.137
+Other Private Fund,2018Q2,148.0,0.134
+Other Private Fund,2018Q3,134.0,0.123
+Other Private Fund,2018Q4,132.0,0.12
+Other Private Fund,2019Q1,131.0,0.119
+Other Private Fund,2019Q2,134.0,0.123
+Other Private Fund,2019Q3,135.0,0.122
+Other Private Fund,2019Q4,111.0,0.09
+Other Private Fund,2020Q1,109.0,0.09
+Other Private Fund,2020Q2,109.0,0.089
+Other Private Fund,2020Q3,106.0,0.087
+Other Private Fund,2020Q4,134.0,0.103
+Other Private Fund,2021Q1,138.0,0.105
+Other Private Fund,2021Q2,134.0,0.1
+Other Private Fund,2021Q3,133.0,0.104
+Other Private Fund,2021Q4,118.0,0.076
+Other Private Fund,2022Q1,110.0,0.07
+Other Private Fund,2022Q2,110.0,0.071
+Other Private Fund,2022Q3,112.0,0.073
+Other Private Fund,2022Q4,105.0,0.074
+Other Private Fund,2023Q1,103.0,0.075
+Other Private Fund,2023Q2,104.0,0.078
+Other Private Fund,2023Q3,101.0,0.076
+Other Private Fund,2023Q4,99.0,0.064
+Other Private Fund,2024Q1,97.0,0.063
+Other Private Fund,2024Q2,97.0,0.063
+Other Private Fund,2024Q3,97.0,0.062
+Other Private Fund,2024Q4,161.0,0.098
+Other Private Fund,2025Q1,161.0,0.099
+Private Equity Fund,2013Q1,49.0,0.033
+Private Equity Fund,2013Q2,49.0,0.033
+Private Equity Fund,2013Q3,49.0,0.033
+Private Equity Fund,2013Q4,48.0,0.028
+Private Equity Fund,2014Q1,45.0,0.026
+Private Equity Fund,2014Q2,43.0,0.025
+Private Equity Fund,2014Q3,44.0,0.026
+Private Equity Fund,2014Q4,66.0,0.037
+Private Equity Fund,2015Q1,69.0,0.039
+Private Equity Fund,2015Q2,71.0,0.04
+Private Equity Fund,2015Q3,73.0,0.043
+Private Equity Fund,2015Q4,54.0,0.029
+Private Equity Fund,2016Q1,54.0,0.028
+Private Equity Fund,2016Q2,54.0,0.028
+Private Equity Fund,2016Q3,53.0,0.028
+Private Equity Fund,2016Q4,38.0,0.018
+Private Equity Fund,2017Q1,38.0,0.018
+Private Equity Fund,2017Q2,38.0,0.018
+Private Equity Fund,2017Q3,38.0,0.018
+Private Equity Fund,2017Q4,39.0,0.016
+Private Equity Fund,2018Q1,40.0,0.016
+Private Equity Fund,2018Q2,40.0,0.016
+Private Equity Fund,2018Q3,40.0,0.016
+Private Equity Fund,2018Q4,38.0,0.013
+Private Equity Fund,2019Q1,37.0,0.013
+Private Equity Fund,2019Q2,37.0,0.013
+Private Equity Fund,2019Q3,37.0,0.013
+Private Equity Fund,2019Q4,95.0,0.029
+Private Equity Fund,2020Q1,96.0,0.029
+Private Equity Fund,2020Q2,96.0,0.029
+Private Equity Fund,2020Q3,97.0,0.029
+Private Equity Fund,2020Q4,66.0,0.016
+Private Equity Fund,2021Q1,66.0,0.015
+Private Equity Fund,2021Q2,66.0,0.016
+Private Equity Fund,2021Q3,66.0,0.015
+Private Equity Fund,2021Q4,70.0,0.012
+Private Equity Fund,2022Q1,69.0,0.012
+Private Equity Fund,2022Q2,69.0,0.012
+Private Equity Fund,2022Q3,71.0,0.012
+Private Equity Fund,2022Q4,158.0,0.026
+Private Equity Fund,2023Q1,159.0,0.027
+Private Equity Fund,2023Q2,159.0,0.027
+Private Equity Fund,2023Q3,159.0,0.027
+Private Equity Fund,2023Q4,136.0,0.02
+Private Equity Fund,2024Q1,109.0,0.016
+Private Equity Fund,2024Q2,109.0,0.016
+Private Equity Fund,2024Q3,110.0,0.016
+Private Equity Fund,2024Q4,131.0,0.018
+Private Equity Fund,2025Q1,131.0,0.018
+Qualifying Hedge Fund,2013Q1,,4.225
+Qualifying Hedge Fund,2013Q2,,3.525
+Qualifying Hedge Fund,2013Q3,,3.309
+Qualifying Hedge Fund,2013Q4,,3.161
+Qualifying Hedge Fund,2014Q1,,3.031
+Qualifying Hedge Fund,2014Q2,,3.113
+Qualifying Hedge Fund,2014Q3,,3.201
+Qualifying Hedge Fund,2014Q4,,2.839
+Qualifying Hedge Fund,2015Q1,,2.935
+Qualifying Hedge Fund,2015Q2,,2.753
+Qualifying Hedge Fund,2015Q3,,2.927
+Qualifying Hedge Fund,2015Q4,,2.687
+Qualifying Hedge Fund,2016Q1,,3.014
+Qualifying Hedge Fund,2016Q2,,3.016
+Qualifying Hedge Fund,2016Q3,,2.988
+Qualifying Hedge Fund,2016Q4,,2.881
+Qualifying Hedge Fund,2017Q1,,3.111
+Qualifying Hedge Fund,2017Q2,,3.033
+Qualifying Hedge Fund,2017Q3,,3.212
+Qualifying Hedge Fund,2017Q4,,3.324
+Qualifying Hedge Fund,2018Q1,,3.895
+Qualifying Hedge Fund,2018Q2,,3.59
+Qualifying Hedge Fund,2018Q3,,3.241
+Qualifying Hedge Fund,2018Q4,,3.327
+Qualifying Hedge Fund,2019Q1,,3.617
+Qualifying Hedge Fund,2019Q2,,3.601
+Qualifying Hedge Fund,2019Q3,,3.606
+Qualifying Hedge Fund,2019Q4,,3.451
+Qualifying Hedge Fund,2020Q1,,3.613
+Qualifying Hedge Fund,2020Q2,,2.969
+Qualifying Hedge Fund,2020Q3,,3.462
+Qualifying Hedge Fund,2020Q4,,3.328
+Qualifying Hedge Fund,2021Q1,,3.601
+Qualifying Hedge Fund,2021Q2,,3.545
+Qualifying Hedge Fund,2021Q3,,3.472
+Qualifying Hedge Fund,2021Q4,,3.376
+Qualifying Hedge Fund,2022Q1,,3.438
+Qualifying Hedge Fund,2022Q2,,3.422
+Qualifying Hedge Fund,2022Q3,,3.238
+Qualifying Hedge Fund,2022Q4,,3.315
+Qualifying Hedge Fund,2023Q1,,3.214
+Qualifying Hedge Fund,2023Q2,,3.442
+Qualifying Hedge Fund,2023Q3,,3.456
+Qualifying Hedge Fund,2023Q4,,3.501
+Qualifying Hedge Fund,2024Q1,,3.621
+Qualifying Hedge Fund,2024Q2,,3.836
+Qualifying Hedge Fund,2024Q3,,3.985
+Qualifying Hedge Fund,2024Q4,,3.825
+Qualifying Hedge Fund,2025Q1,,4.222
+Real Estate Fund,2013Q1,12.0,0.05
+Real Estate Fund,2013Q2,12.0,0.05
+Real Estate Fund,2013Q3,12.0,0.049
+Real Estate Fund,2013Q4,12.0,0.044
+Real Estate Fund,2014Q1,12.0,0.044
+Real Estate Fund,2014Q2,12.0,0.044
+Real Estate Fund,2014Q3,12.0,0.044
+Real Estate Fund,2014Q4,13.0,0.045
+Real Estate Fund,2015Q1,13.0,0.045
+Real Estate Fund,2015Q2,13.0,0.045
+Real Estate Fund,2015Q3,13.0,0.045
+Real Estate Fund,2015Q4,21.0,0.066
+Real Estate Fund,2016Q1,21.0,0.066
+Real Estate Fund,2016Q2,21.0,0.066
+Real Estate Fund,2016Q3,21.0,0.066
+Real Estate Fund,2016Q4,16.0,0.048
+Real Estate Fund,2017Q1,16.0,0.047
+Real Estate Fund,2017Q2,16.0,0.047
+Real Estate Fund,2017Q3,16.0,0.047
+Real Estate Fund,2017Q4,17.0,0.044
+Real Estate Fund,2018Q1,17.0,0.044
+Real Estate Fund,2018Q2,17.0,0.044
+Real Estate Fund,2018Q3,17.0,0.044
+Real Estate Fund,2018Q4,17.0,0.037
+Real Estate Fund,2019Q1,17.0,0.037
+Real Estate Fund,2019Q2,17.0,0.037
+Real Estate Fund,2019Q3,17.0,0.037
+Real Estate Fund,2019Q4,18.0,0.036
+Real Estate Fund,2020Q1,18.0,0.036
+Real Estate Fund,2020Q2,18.0,0.036
+Real Estate Fund,2020Q3,18.0,0.036
+Real Estate Fund,2020Q4,19.0,0.031
+Real Estate Fund,2021Q1,18.0,0.029
+Real Estate Fund,2021Q2,18.0,0.029
+Real Estate Fund,2021Q3,18.0,0.029
+Real Estate Fund,2021Q4,41.0,0.056
+Real Estate Fund,2022Q1,41.0,0.056
+Real Estate Fund,2022Q2,41.0,0.055
+Real Estate Fund,2022Q3,41.0,0.055
+Real Estate Fund,2022Q4,72.0,0.084
+Real Estate Fund,2023Q1,76.0,0.089
+Real Estate Fund,2023Q2,78.0,0.09
+Real Estate Fund,2023Q3,65.0,0.076
+Real Estate Fund,2023Q4,64.0,0.078
+Real Estate Fund,2024Q1,64.0,0.077
+Real Estate Fund,2024Q2,64.0,0.078
+Real Estate Fund,2024Q3,64.0,0.078
+Real Estate Fund,2024Q4,94.0,0.107
+Real Estate Fund,2025Q1,94.0,0.107
+Section 4 Private Equity Fund,2013Q1,,0.043
+Section 4 Private Equity Fund,2013Q2,,0.043
+Section 4 Private Equity Fund,2013Q3,,0.042
+Section 4 Private Equity Fund,2013Q4,,0.035
+Section 4 Private Equity Fund,2014Q1,,0.035
+Section 4 Private Equity Fund,2014Q2,,0.035
+Section 4 Private Equity Fund,2014Q3,,0.035
+Section 4 Private Equity Fund,2014Q4,,0.047
+Section 4 Private Equity Fund,2015Q1,,0.047
+Section 4 Private Equity Fund,2015Q2,,0.047
+Section 4 Private Equity Fund,2015Q3,,0.047
+Section 4 Private Equity Fund,2015Q4,,0.031
+Section 4 Private Equity Fund,2016Q1,,0.031
+Section 4 Private Equity Fund,2016Q2,,0.031
+Section 4 Private Equity Fund,2016Q3,,0.031
+Section 4 Private Equity Fund,2016Q4,,0.023
+Section 4 Private Equity Fund,2017Q1,,0.023
+Section 4 Private Equity Fund,2017Q2,,0.023
+Section 4 Private Equity Fund,2017Q3,,0.023
+Section 4 Private Equity Fund,2017Q4,,0.019
+Section 4 Private Equity Fund,2018Q1,,0.019
+Section 4 Private Equity Fund,2018Q2,,0.019
+Section 4 Private Equity Fund,2018Q3,,0.019
+Section 4 Private Equity Fund,2018Q4,,0.015
+Section 4 Private Equity Fund,2019Q1,,0.015
+Section 4 Private Equity Fund,2019Q2,,0.015
+Section 4 Private Equity Fund,2019Q3,,0.015
+Section 4 Private Equity Fund,2019Q4,,0.015
+Section 4 Private Equity Fund,2020Q1,,0.015
+Section 4 Private Equity Fund,2020Q2,,0.015
+Section 4 Private Equity Fund,2020Q3,,0.015
+Section 4 Private Equity Fund,2020Q4,,0.011
+Section 4 Private Equity Fund,2021Q1,,0.01
+Section 4 Private Equity Fund,2021Q2,,0.01
+Section 4 Private Equity Fund,2021Q3,,0.01
+Section 4 Private Equity Fund,2021Q4,,0.012
+Section 4 Private Equity Fund,2022Q1,,0.012
+Section 4 Private Equity Fund,2022Q2,,0.012
+Section 4 Private Equity Fund,2022Q3,,0.012
+Section 4 Private Equity Fund,2022Q4,,0.015
+Section 4 Private Equity Fund,2023Q1,,0.015
+Section 4 Private Equity Fund,2023Q2,,0.015
+Section 4 Private Equity Fund,2023Q3,,0.015
+Section 4 Private Equity Fund,2023Q4,,0.021
+Section 4 Private Equity Fund,2024Q1,,0.021
+Section 4 Private Equity Fund,2024Q2,,0.021
+Section 4 Private Equity Fund,2024Q3,,0.021
+Section 4 Private Equity Fund,2024Q4,,0.019
+Section 4 Private Equity Fund,2025Q1,,0.018
+Securitized Asset Fund,2013Q1,72.0,0.632
+Securitized Asset Fund,2013Q2,70.0,0.619
+Securitized Asset Fund,2013Q3,70.0,0.608
+Securitized Asset Fund,2013Q4,45.0,0.388
+Securitized Asset Fund,2014Q1,45.0,0.373
+Securitized Asset Fund,2014Q2,45.0,0.359
+Securitized Asset Fund,2014Q3,45.0,0.356
+Securitized Asset Fund,2014Q4,27.0,0.237
+Securitized Asset Fund,2015Q1,29.0,0.256
+Securitized Asset Fund,2015Q2,29.0,0.251
+Securitized Asset Fund,2015Q3,28.0,0.242
+Securitized Asset Fund,2015Q4,11.0,0.083
+Securitized Asset Fund,2016Q1,11.0,0.079
+Securitized Asset Fund,2016Q2,11.0,0.077
+Securitized Asset Fund,2016Q3,10.0,0.074
+Securitized Asset Fund,2016Q4,14.0,0.098
+Securitized Asset Fund,2017Q1,14.0,0.098
+Securitized Asset Fund,2017Q2,14.0,0.094
+Securitized Asset Fund,2017Q3,13.0,0.092
+Securitized Asset Fund,2017Q4,3.0,0.017
+Securitized Asset Fund,2018Q1,2.0,0.016
+Securitized Asset Fund,2018Q2,2.0,0.015
+Securitized Asset Fund,2018Q3,2.0,0.015
+Securitized Asset Fund,2018Q4,3.0,0.016
+Securitized Asset Fund,2019Q1,3.0,0.016
+Securitized Asset Fund,2019Q2,3.0,0.016
+Securitized Asset Fund,2019Q3,3.0,0.016
+Securitized Asset Fund,2019Q4,3.0,0.015
+Securitized Asset Fund,2020Q1,3.0,0.015
+Securitized Asset Fund,2020Q2,3.0,0.015
+Securitized Asset Fund,2020Q3,3.0,0.015
+Securitized Asset Fund,2020Q4,3.0,0.012
+Securitized Asset Fund,2021Q1,3.0,0.013
+Securitized Asset Fund,2021Q2,3.0,0.012
+Securitized Asset Fund,2021Q3,3.0,0.012
+Securitized Asset Fund,2021Q4,5.0,0.018
+Securitized Asset Fund,2022Q1,5.0,0.018
+Securitized Asset Fund,2022Q2,5.0,0.018
+Securitized Asset Fund,2022Q3,5.0,0.018
+Securitized Asset Fund,2022Q4,,0.021
+Securitized Asset Fund,2023Q1,,0.021
+Securitized Asset Fund,2023Q2,,0.014
+Securitized Asset Fund,2023Q3,,0.014
+Securitized Asset Fund,2023Q4,,0.003
+Securitized Asset Fund,2024Q1,,0.003
+Securitized Asset Fund,2024Q2,,0.003
+Securitized Asset Fund,2024Q3,,0.003
+Securitized Asset Fund,2024Q4,,0.009
+Securitized Asset Fund,2025Q1,,0.009
+Total,2013Q1,10545.0,1.978
+Total,2013Q2,9789.0,1.801
+Total,2013Q3,8794.0,1.573
+Total,2013Q4,8978.0,1.438
+Total,2014Q1,9045.0,1.425
+Total,2014Q2,9624.0,1.475
+Total,2014Q3,10046.0,1.531
+Total,2014Q4,9126.0,1.356
+Total,2015Q1,9728.0,1.406
+Total,2015Q2,9249.0,1.338
+Total,2015Q3,9474.0,1.401
+Total,2015Q4,8612.0,1.229
+Total,2016Q1,9315.0,1.341
+Total,2016Q2,9493.0,1.358
+Total,2016Q3,9532.0,1.349
+Total,2016Q4,9335.0,1.266
+Total,2017Q1,10384.0,1.385
+Total,2017Q2,10312.0,1.364
+Total,2017Q3,11572.0,1.514
+Total,2017Q4,12370.0,1.488
+Total,2018Q1,14442.0,1.708
+Total,2018Q2,13624.0,1.597
+Total,2018Q3,13797.0,1.608
+Total,2018Q4,12871.0,1.475
+Total,2019Q1,14369.0,1.595
+Total,2019Q2,13285.0,1.461
+Total,2019Q3,13779.0,1.517
+Total,2019Q4,13012.0,1.326
+Total,2020Q1,12206.0,1.284
+Total,2020Q2,11282.0,1.148
+Total,2020Q3,13977.0,1.386
+Total,2020Q4,14392.0,1.251
+Total,2021Q1,15463.0,1.316
+Total,2021Q2,16479.0,1.36
+Total,2021Q3,16078.0,1.338
+Total,2021Q4,15730.0,1.117
+Total,2022Q1,15822.0,1.122
+Total,2022Q2,14736.0,1.062
+Total,2022Q3,13976.0,1.013
+Total,2022Q4,14772.0,1.051
+Total,2023Q1,15071.0,1.077
+Total,2023Q2,15289.0,1.089
+Total,2023Q3,15562.0,1.106
+Total,2023Q4,15455.0,1.022
+Total,2024Q1,16952.0,1.104
+Total,2024Q2,17743.0,1.155
+Total,2024Q3,19533.0,1.256
+Total,2024Q4,18358.0,1.124
+Total,2025Q1,20631.0,1.256
+Venture Capital Fund,2013Q1,,0.003
+Venture Capital Fund,2013Q2,,0.003
+Venture Capital Fund,2013Q3,,0.003
+Venture Capital Fund,2013Q4,0.0,0.002
+Venture Capital Fund,2014Q1,0.0,0.002
+Venture Capital Fund,2014Q2,0.0,0.002
+Venture Capital Fund,2014Q3,0.0,0.002
+Venture Capital Fund,2014Q4,,0.001
+Venture Capital Fund,2015Q1,,0.001
+Venture Capital Fund,2015Q2,,0.001
+Venture Capital Fund,2015Q3,,0.001
+Venture Capital Fund,2015Q4,,0.0
+Venture Capital Fund,2016Q1,,0.0
+Venture Capital Fund,2016Q2,,0.0
+Venture Capital Fund,2016Q3,,0.0
+Venture Capital Fund,2016Q4,,0.0
+Venture Capital Fund,2017Q1,,0.0
+Venture Capital Fund,2017Q2,,0.0
+Venture Capital Fund,2017Q3,,0.0
+Venture Capital Fund,2017Q4,,0.0
+Venture Capital Fund,2018Q1,,0.0
+Venture Capital Fund,2018Q2,,0.0
+Venture Capital Fund,2018Q3,,0.0
+Venture Capital Fund,2018Q4,,0.001
+Venture Capital Fund,2019Q1,,0.001
+Venture Capital Fund,2019Q2,,0.001
+Venture Capital Fund,2019Q3,,0.001
+Venture Capital Fund,2019Q4,,0.001
+Venture Capital Fund,2020Q1,,0.0
+Venture Capital Fund,2020Q2,,0.001
+Venture Capital Fund,2020Q3,,0.001
+Venture Capital Fund,2020Q4,,0.001
+Venture Capital Fund,2021Q1,,0.001
+Venture Capital Fund,2021Q2,,0.001
+Venture Capital Fund,2021Q3,,0.001
+Venture Capital Fund,2021Q4,,0.001
+Venture Capital Fund,2022Q1,,0.001
+Venture Capital Fund,2022Q2,,0.001
+Venture Capital Fund,2022Q3,,0.001
+Venture Capital Fund,2022Q4,0.0,0.001
+Venture Capital Fund,2023Q1,0.0,0.001
+Venture Capital Fund,2023Q2,0.0,0.001
+Venture Capital Fund,2023Q3,0.0,0.001
+Venture Capital Fund,2023Q4,0.0,0.001
+Venture Capital Fund,2024Q1,0.0,0.001
+Venture Capital Fund,2024Q2,0.0,0.001
+Venture Capital Fund,2024Q3,0.0,0.001
+Venture Capital Fund,2024Q4,1.0,0.002
+Venture Capital Fund,2025Q1,1.0,0.002

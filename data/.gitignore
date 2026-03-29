@@ -5,12 +5,11 @@ raw/form_pf/
 raw/form_adv/
 raw/dtcc/
 raw/fcm/
-processed/*.csv
+processed/*.log
 
 # IDE / OS
 .ipynb_checkpoints/
 __pycache__/
 .DS_Store
 .vscode/
-*.json
 env.py

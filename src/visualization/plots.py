@@ -418,9 +418,7 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
     data = data.sort_values("date")
     data["gav_nav_ratio"] = data["gav"] / data["nav"].replace(0, np.nan)
 
-    fig, (ax_top, ax_bot) = plt.subplots(
-        2, 1, sharex=True, figsize=(14, 8), gridspec_kw={"height_ratios": [1.2, 1]}
-    )
+    fig, (ax_top, ax_bot) = plt.subplots(2, 1, sharex=True, figsize=(14, 8), gridspec_kw={"height_ratios": [1.2, 1]})
 
     # --- Top panel: GAV and NAV ---
     ax_top.plot(data["date"], data["gav"], linewidth=2.5, color=COLORS["blue"], label="GAV")
@@ -449,9 +447,7 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
     ax_bot.grid(axis="x", visible=False)
 
     # --- Title and footer ---
-    fig.suptitle(
-        "U.S. Hedge Fund Industry — Assets & Leverage (2013–2026)", fontsize=14, fontweight="bold", y=0.97
-    )
+    fig.suptitle("U.S. Hedge Fund Industry — Assets & Leverage (2013–2026)", fontsize=14, fontweight="bold", y=0.97)
 
     footer = (
         "GAV (Gross Asset Value): Total assets including leveraged positions  •  "
@@ -841,6 +837,78 @@ def plot_fcm_concentration(df, save_path=None):
     plt.show()
 
 
+def plot_dtcc_summary(df, save_path=None):
+    """DTCC quarterly summary — notional by asset class and clearing rate trend."""
+    required = {"quarter", "asset_class"}
+    if not required.issubset(df.columns):
+        print(f"plot_dtcc_summary: missing columns {required - set(df.columns)}")
+        return
+
+    data = df.copy()
+    quarters = sorted(data["quarter"].dropna().astype(str).unique())
+    asset_classes = sorted(data["asset_class"].dropna().astype(str).unique())
+    if not quarters or not asset_classes:
+        print("plot_dtcc_summary: no quarterly DTCC data available")
+        return
+
+    notional_col = (
+        "quarter_end_total_notional_bn" if "quarter_end_total_notional_bn" in data.columns else "total_notional_bn"
+    )
+    cleared_col = "quarter_end_cleared_pct" if "quarter_end_cleared_pct" in data.columns else "avg_cleared_pct"
+
+    if notional_col not in data.columns or cleared_col not in data.columns:
+        print("plot_dtcc_summary: missing notional or cleared-percentage columns")
+        return
+
+    colors = [COLORS["dark"], COLORS["red"], COLORS["blue"], COLORS["green"], COLORS["purple"]]
+    x = np.arange(len(quarters))
+    bar_width = 0.8 / len(asset_classes)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    for i, asset_class in enumerate(asset_classes):
+        asset_data = data[data["asset_class"] == asset_class].set_index("quarter").reindex(quarters)
+        ax1.bar(
+            x + i * bar_width - 0.4 + bar_width / 2,
+            asset_data[notional_col],
+            width=bar_width,
+            color=colors[i % len(colors)],
+            alpha=0.8,
+            label=asset_class,
+        )
+
+        ax2.plot(
+            quarters,
+            asset_data[cleared_col] * 100,
+            "o-",
+            color=colors[i % len(colors)],
+            label=asset_class,
+            linewidth=2,
+            markersize=6,
+        )
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(quarters, fontsize=9, rotation=45, ha="right")
+    ax1.set_ylabel("Total Notional ($B)")
+    ax1.set_title("DTCC — Notional Outstanding by Asset Class")
+    ax1.legend(fontsize=8, framealpha=0.9, edgecolor="gray")
+    ax1.spines[["top", "right"]].set_visible(False)
+    ax1.yaxis.set_major_formatter(fmt_billions)
+    ax1.tick_params(labelsize=10)
+
+    ax2.set_ylabel("Clearing Rate (%)")
+    ax2.set_title("DTCC — Quarterly Clearing Rate by Asset Class")
+    ax2.legend(fontsize=8, framealpha=0.9, edgecolor="gray")
+    ax2.spines[["top", "right"]].set_visible(False)
+    ax2.yaxis.set_major_formatter(fmt_pct)
+    ax2.tick_params(axis="x", labelsize=9, rotation=45)
+    ax2.tick_params(labelsize=10)
+
+    plt.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
 def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
     """Cross-source leverage comparison — Z.1 vs Form PF.
 
@@ -1168,16 +1236,16 @@ def plot_liquidity_mismatch_detail(liquidity_results, save_path=None):
 
         ax.plot(mm.index, mm["mismatch"] * 100, linewidth=2, color=color)
         ax.fill_between(mm.index, mm["mismatch"] * 100, alpha=0.15, color=color)
-        ax.axhline(20, color=COLORS["red"], linestyle="--", alpha=0.5, label="Danger threshold (20%)")
+        ax.axhline(-20, color=COLORS["red"], linestyle="--", alpha=0.5, label="Danger threshold (-20%)")
         ax.axhline(0, color="gray", linewidth=0.5)
 
         ax.set_title(period, fontsize=11)
-        ax.set_ylabel("Investor - Portfolio (%)")
+        ax.set_ylabel("Portfolio - Investor (%)")
         ax.legend(fontsize=8, framealpha=0.9, edgecolor="gray")
         _polish(ax, ylabel_fmt=fmt_pct)
         add_event_annotations(ax)
 
-    fig.suptitle("Form PF — Liquidity Mismatch (Investor vs Portfolio)", fontsize=14, y=1.02)
+    fig.suptitle("Form PF — Liquidity Cushion (Portfolio vs Investor)", fontsize=14, y=1.02)
     plt.tight_layout()
     _save(fig, save_path)
     plt.show()

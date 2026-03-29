@@ -2,7 +2,13 @@
 
 import pandas as pd
 
-from src.data.fetch import HEDGE_FUND_CIKS, HEDGE_FUND_SERIES, SEC_HEADERS
+from src.data.fetch import (
+    HEDGE_FUND_CIKS,
+    HEDGE_FUND_SERIES,
+    SEC_HEADERS,
+    load_best_13f_holdings,
+    normalize_13f_holdings,
+)
 
 
 class TestConstants:
@@ -49,3 +55,78 @@ class TestFetchHedgeFundDataCache:
         result = fetch_hedge_fund_data(fred_client=None, series_map={}, cache_path=str(cache_file))
         assert len(result) == 3
         assert "Total assets" in result.columns
+
+
+class TestThirteenFHelpers:
+    def test_normalize_13f_holdings_handles_mixed_value_eras(self):
+        df = pd.DataFrame(
+            {
+                "filing_date": ["2021-11-15", "2026-02-17"],
+                "value_thousands": [24_403_796, 20_322_281_328],
+            }
+        )
+
+        result = normalize_13f_holdings(df)
+
+        assert result.loc[0, "value_unit"] == "thousands"
+        assert result.loc[0, "value_usd"] == 24_403_796_000
+        assert result.loc[1, "value_unit"] == "usd"
+        assert result.loc[1, "value_usd"] == 20_322_281_328
+
+    def test_load_best_13f_holdings_prefers_latest_window_over_stale_aggregate(self, tmp_path):
+        stale = pd.DataFrame(
+            {
+                "fund": ["Fund A"],
+                "filing_date": ["2021-05-15"],
+                "report_period": ["2021Q1"],
+                "value_thousands": [1_000],
+            }
+        )
+        stale.to_csv(tmp_path / "13f_all_holdings.csv", index=False)
+
+        latest_a = pd.DataFrame(
+            {
+                "fund": ["Fund A"],
+                "filing_date": ["2026-02-17"],
+                "report_period": ["2025Q4"],
+                "value_thousands": [2_000],
+            }
+        )
+        latest_b = pd.DataFrame(
+            {
+                "fund": ["Fund B"],
+                "filing_date": ["2026-02-17"],
+                "report_period": ["2025Q4"],
+                "value_thousands": [3_000],
+            }
+        )
+        latest_a.to_csv(tmp_path / "13f_fund_a_20240322_20260322.csv", index=False)
+        latest_b.to_csv(tmp_path / "13f_fund_b_20240322_20260322.csv", index=False)
+
+        result = load_best_13f_holdings(
+            cache_dir=str(tmp_path),
+            expected_funds={"Fund A": "1", "Fund B": "2"},
+        )
+
+        assert sorted(result["fund"].unique()) == ["Fund A", "Fund B"]
+        assert result["report_period"].max() == "2025Q4"
+
+    def test_load_best_13f_holdings_falls_back_to_processed_snapshot(self, tmp_path):
+        processed_dir = tmp_path / "processed"
+        processed_dir.mkdir()
+        snapshot = pd.DataFrame(
+            {
+                "fund": ["Fund A"],
+                "filing_date": ["2026-02-17"],
+                "report_period": ["2025Q4"],
+                "value_thousands": [2_000],
+                "value_unit": ["usd"],
+            }
+        )
+        snapshot.to_csv(processed_dir / "13f_holdings.csv", index=False)
+
+        result = load_best_13f_holdings(cache_dir=str(tmp_path / "raw"))
+
+        assert len(result) == 1
+        assert result.loc[0, "report_period"] == "2025Q4"
+        assert result.loc[0, "value_usd"] == 2_000

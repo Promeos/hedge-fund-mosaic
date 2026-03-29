@@ -1,0 +1,25 @@
+claim_id,claim_label,value,display_value,source_files,generation_step
+z1_total_assets_latest_b,"Fed Z.1 hedge fund assets (latest, $B)",3258.408,$3258.4B,data/processed/hedge_fund_analysis.csv,artifact_metrics
+z1_total_assets_yoy_pct,"Fed Z.1 hedge fund assets YoY growth (latest, %)",0.15562119097068527,15.6%,data/processed/hedge_fund_analysis.csv,artifact_metrics
+form_pf_hedge_fund_gav_latest_b,"Form PF hedge fund gross asset value (latest, $B)",12590.0,$12590B,data/processed/form_pf_gav_nav.csv,artifact_metrics
+form_pf_derivatives_latest_b,"Form PF hedge fund derivative value (latest, $B)",20240.0,$20240B,data/processed/form_pf_derivatives.csv,artifact_metrics
+form_pf_derivatives_to_nav_latest_x,"Form PF hedge fund derivative-to-NAV ratio (latest, x)",3.735,3.7x,data/processed/form_pf_derivatives.csv,artifact_metrics
+form_pf_all_private_gav_latest_b,"Form PF all private funds gross asset value (latest, $B)",50981.0,$50981B,data/processed/form_pf_gav_nav.csv,artifact_metrics
+form_pf_all_private_nav_latest_b,"Form PF all private funds net asset value (latest, $B)",32851.0,$32851B,data/processed/form_pf_gav_nav.csv,artifact_metrics
+form_pf_all_private_gav_nav_latest_x,"Form PF all private funds GAV/NAV ratio (latest, x)",1.551885787342851,1.55x,data/processed/form_pf_gav_nav.csv,artifact_metrics
+form_pf_top10_nav_share_latest_pct,"Form PF Top 10 fund concentration (latest, % of NAV)",0.082,8.2%,data/processed/form_pf_concentration.csv,artifact_metrics
+form_pf_top500_nav_share_latest_pct,"Form PF Top 500 fund concentration (latest, % of NAV)",0.548,54.8%,data/processed/form_pf_concentration.csv,artifact_metrics
+swaps_ir_total_latest_b,"CFTC weekly swaps interest-rate notional outstanding (latest, $B)",415553.2,$415.6T,data/processed/swaps_weekly.csv,artifact_metrics
+thirteenf_total_rows,13F amendment-deduped rows in bundled snapshot,384723.0,"384,723",data/processed/13f_holdings.csv,artifact_metrics
+thirteenf_long_positions_total,13F long equity/ETF rows in bundled snapshot,283362.0,"283,362",data/processed/13f_holdings.csv,artifact_metrics
+thirteenf_latest_long_value_b,13F combined long equity value in latest quarter ($B),831.085279604,$831B,data/processed/13f_holdings.csv,artifact_metrics
+thirteenf_nvidia_value_b,13F combined NVIDIA value in latest quarter ($B),19.07211545,$19.1B,data/processed/13f_holdings.csv,artifact_metrics
+thirteenf_top_issuer_value_b,13F top issuer value in latest quarter ($B),20.322281328,$20.3B,data/processed/13f_holdings.csv,artifact_metrics
+dtcc_max_daily_trades,DTCC maximum summed daily trade count,1127606.0,"1,127,606",data/processed/dtcc_daily_summary.csv,artifact_metrics
+z1_prime_brokerage_share_latest_pct,"Prime brokerage share of hedge fund borrowing (latest, %)",0.7900701731934135,79.0%,data/processed/hedge_fund_analysis.csv,artifact_metrics
+form_pf_us_financial_share_latest_pct,"Form PF U.S. financial creditor share (latest, %)",0.639,63.9%,data/processed/form_pf_borrowing_creditor.csv,artifact_metrics
+form_pf_non_us_financial_share_latest_pct,"Form PF non-U.S. financial creditor share (latest, %)",0.353,35.3%,data/processed/form_pf_borrowing_creditor.csv,artifact_metrics
+liquidity_30d_mean_gap_pct,"Form PF 30-day portfolio-minus-investor liquidity gap (mean, %)",0.4653061224489795,46.5%,data/processed/form_pf_liquidity.csv; outputs/reports/advanced_analysis.txt,advanced_analysis
+liquidity_30d_dangerous_quarters,Form PF dangerous 30-day liquidity quarters (< -20%),0.0,0,data/processed/form_pf_liquidity.csv; outputs/reports/advanced_analysis.txt,advanced_analysis
+leverage_adf_pvalue,ADF p-value for Z.1 leverage ratio,0.13882938896361313,0.1388,outputs/reports/cross_source_tests.csv,cross_source_analysis
+fcm_capital_adequacy_ratio_latest,FCM industry capital adequacy ratio (latest),3.550737188033695,3.55x,data/processed/fcm_monthly_industry.csv,artifact_metrics

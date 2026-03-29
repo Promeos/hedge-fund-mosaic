@@ -17,7 +17,7 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 - **$3.3 trillion** in total assets (Fed Z.1 Q3 2025) — with **$12.6T** in gross assets via Form PF
 - **$20.2 trillion** in derivative exposure — 3.7x their net asset value
 - **$415 trillion** in interest rate swap notional flowing through the system weekly
-- **289,025 individual equity holdings** across 8 of the largest funds — rolling 2-year window (2024–2026), amendment-deduped
+- **283,362 long equity/ETF positions** across 8 of the largest funds — report periods **2024Q1–2025Q4**, amendment-deduped
 - **Over 1 million OTC derivative trades per day** flowing through DTCC
 - The complete **borrowing, leverage, and counterparty structure** of an industry that answers to no single regulator
 
@@ -28,7 +28,7 @@ This project pulls from **9 public data sources** across the Federal Reserve, SE
 | 1 | **Federal Reserve Z.1** | Aggregate balance sheet (Table B.101.f) — assets, liabilities, net worth | Raw FRED series span 1945–2025; usable hedge fund observations begin 2012 Q4 |
 | 2 | **SEC Form PF** | Private fund statistics — GAV, NAV, leverage, derivatives, borrowing by creditor, strategy allocation, concentration | 2013–2025, quarterly + monthly |
 | 3 | **CFTC Weekly Swaps** | OTC derivatives market — interest rate, credit, and FX swap notional, volumes, counterparty splits | 2013–2026, weekly |
-| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped | Rolling 2-year window (currently 2024–2026) |
+| 4 | **SEC EDGAR 13F** | Fund-level equity holdings for Citadel, Bridgewater, Renaissance, Point72, Two Sigma, D.E. Shaw, Millennium, AQR — amendment-deduped | Bundled local cache currently spans report periods **2024Q1–2025Q4** |
 | 5 | **SEC EDGAR Submissions** | Complete filing history, SC 13G (5%+ ownership stakes), Form ADV registration | 1996–2026 |
 | 6 | **CFTC COT** | Leveraged fund positioning in equity index futures | Weekly |
 | 7 | **CBOE VIX** | Market volatility index | Daily, aggregated quarterly |
@@ -58,8 +58,8 @@ That's **$25.5 trillion** in gross assets across the U.S. private fund industry 
 ### Extreme Concentration
 - Top 10 funds control **8.2%** of industry NAV
 - Top 500 funds control **54.8%**
-- Combined 13F equity AUM across 8 mega funds: **$566B** (Q4 2025 shares only, amendment-deduped)
-- NVIDIA held by all 8 funds ($9.6B combined); iShares ETFs are the #1 position ($24.0B)
+- Combined 13F long equity value across 8 mega funds: **$831B** (2025Q4 snapshot, options excluded)
+- NVIDIA held by all 8 funds (**$19.1B** combined); iShares ETFs are the #1 line item (**$20.3B**)
 - Citadel filed **854 SC 13G forms** (5%+ ownership in 854 companies)
 
 ### The Borrowing Machine
@@ -87,11 +87,11 @@ The individual findings above aren't independent — they're links in a statisti
 
 The accelerants are already in place:
 
-- **Liquidity mismatch:** Only 60.3% of portfolio assets can be liquidated within 30 days, but just 19.1% of investor capital is redeemable on the same horizon — redemption shocks force fire sales at exactly the wrong moment
+- **Liquidity cushion:** Portfolio liquidity exceeds investor redemption terms by **46.5 percentage points** at the 30-day horizon on average; the cushion narrows in high-VIX quarters but stays positive in the bundled sample
 - **Rising broker concentration:** FCM market HHI is trending upward (p<0.001) — fewer brokers are absorbing more risk each cycle, widening the blast radius when one breaks
 - **Leverage is at the all-time peak:** 0.485x (Q3 2025) — the highest in 52 quarters of Z.1 data, with the fastest 5-quarter buildup on record. Monte Carlo simulation (10K paths, 8Q horizon) gives VaR 95% = -1.7% and P(negative) = 7.1%
 
-The dominoes are: **volatility spike → fund deleveraging → broker capital strain → further forced selling** — and the system is more concentrated and less liquid than it was the last time this happened.
+The dominoes are: **volatility spike → fund deleveraging → broker capital strain → further forced selling** — and the system is more concentrated while its liquidity cushion compresses when volatility rises.
 
 ### Cross-Source Statistical Tests
 
@@ -99,9 +99,9 @@ The current suite emits **18 result rows**: 8 named cross-source tests plus 10 A
 
 | Test | Result | p-value | What It Means |
 |------|--------|---------|---------------|
-| **Liquidity gap vs VIX** | **PASS** | 0.005 | The 30-day investor-minus-portfolio liquidity gap moves higher in high-VIX quarters, but remains negative in the bundled sample |
+| **Liquidity gap vs VIX** | **PASS** | 0.005 | The 30-day portfolio-minus-investor liquidity cushion narrows in high-VIX quarters, but remains positive in the bundled sample |
 | **VIX → GAV/NAV (Granger)** | **PASS** | 0.002 | Volatility *causes* leverage changes — fear drives deleveraging |
-| **Z.1 leverage stationarity** | **Fragile** | 0.026 | Borderline stationary (p=0.026 with default lags; p=0.135 with AIC lag selection) — sensitive to test parameters |
+| **Z.1 leverage stationarity** | FAIL | 0.139 | Non-stationary under AIC lag selection in the current run (ADF=-2.410); default-lag variants are more favorable |
 | **Form PF GAV trend** | **PASS** | 0.000 | Industry gross assets trending strongly upward |
 | **Form PF GAV/NAV trend** | **PASS** | 0.000 | Leverage ratio trending upward — funds are levering up |
 | **Z.1 ~ Form PF cointegration** | FAIL | 0.173 | The two measures of industry size move independently |
@@ -339,40 +339,62 @@ Requires **Python 3.10+**.
 
 ```bash
 pip install -r requirements.txt
+```
+
+If you want to refresh raw source data, add a FRED API key:
+
+```bash
 echo "FRED_API_KEY=your_key_here" > .env
 ```
 
 Get a free FRED API key at https://fred.stlouisfed.org/docs/api/api_key.html
 
-> **Note:** Form PF data requires a manual download from the [SEC Form PF Statistics page](https://www.sec.gov/data-research/form-pf-statistics). Place the `.xlsx` file in `data/raw/form_pf/`. All other sources are fetched automatically. Run fetch commands before parse commands.
+> **Note:** Form PF data requires a manual download from the [SEC Form PF Statistics page](https://www.sec.gov/data-research/form-pf-statistics). Place the `.xlsx` file in `data/raw/form_pf/`. The portfolio-facing artifact workflow does not require live fetches and runs from the tracked `data/processed/` snapshot plus safe local caches.
 
 ## Usage
 
 ```bash
-# Fetch all data (cached after first run)
-python -m src.data.fetch
+# Full local refresh: fetch -> parse -> analyze -> artifacts
+python -m src.pipeline
 
-# Download available CFTC weekly swap reports
+# Refresh public figures, reports, provenance files, and the notebook from the tracked snapshot
+python -m src.pipeline --artifacts
+
+# Update the local raw cache only
+python -m src.pipeline --fetch
+
+# Reparse raw inputs into processed CSVs
+python -m src.pipeline --parse
+
+# Recompute analysis outputs only
+python -m src.pipeline --analyze
+
+# Optional source-specific fetchers
+python -m src.data.fetch --13f
 python -m src.data.fetch_swaps
-
-# Download available DTCC trade-level swap data
 python -m src.data.fetch_dtcc
-
-# Download available CFTC FCM financial reports
 python -m src.data.fetch_fcm
-
-# Parse all data sources into processed CSVs
-python -m src.data.parse_form_pf    # 141 sheets → 19 CSVs
-python -m src.data.parse_fcm        # 49 files → 5 CSVs
-python -m src.data.parse_dtcc       # available ZIPs → 2 CSVs + parse log
-python -m src.data.parse_swaps      # available files → 3 CSVs
-
-# Run cross-source analysis (alignment, reconciliation, 18 hypothesis tests)
-python -m src.analysis.cross_source
-
-# Run the analysis notebook
-jupyter notebook notebooks/hedge_fund_analysis.ipynb
 ```
+
+## Reproducibility
+
+This repo now distinguishes between:
+
+- `data/raw/`: an untracked local cache that can exceed 11 GB and is used for live fetch/parse work
+- `data/processed/*.csv`: the tracked compact snapshot used for portfolio-facing analysis and artifact refreshes
+
+The canonical public artifact command is:
+
+```bash
+python -m src.pipeline --artifacts
+```
+
+It regenerates the tracked figures in `outputs/figures/`, selected reports in `outputs/reports/`, the rendered notebook in `notebooks/hedge_fund_analysis.ipynb`, and the provenance files:
+
+- `outputs/reports/claims_ledger.csv`
+- `outputs/reports/run_manifest.json`
+
+Every headline number in the README and executive summary is intended to be traceable through `outputs/reports/claims_ledger.csv`, while `outputs/reports/run_manifest.json` records input file hashes, source coverage windows, the artifact command, and the git commit SHA when available.
 
 ## Project Structure
 
@@ -387,7 +409,7 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   │   ├── 13f_*.csv           # Fund-level holdings
 │   │   ├── cftc_cot.csv        # Futures positioning
 │   │   └── vix_quarterly.csv   # Volatility index
-│   └── processed/              # Cleaned, merged, derived datasets
+│   └── processed/              # Tracked compact snapshot used by public artifacts
 ├── src/
 │   ├── data/
 │   │   ├── fetch.py            # FRED, SEC EDGAR, CFTC, VIX fetchers
@@ -406,10 +428,10 @@ jupyter notebook notebooks/hedge_fund_analysis.ipynb
 │   └── visualization/
 │       └── plots.py            # 18 matplotlib/seaborn chart functions
 ├── notebooks/
-│   └── hedge_fund_analysis.ipynb
+│   └── hedge_fund_analysis.ipynb  # Rendered, executed notebook artifact
 └── outputs/
-    ├── figures/                # Generated charts
-    └── reports/                # Executive summary, stress tests, stats
+    ├── figures/                # Tracked portfolio-facing charts
+    └── reports/                # Tracked reports, claims ledger, run manifest
 ```
 
 ## Tech Stack
@@ -418,7 +440,7 @@ Python 3.10+ — pandas, numpy, matplotlib, seaborn, fredapi, openpyxl, requests
 
 ## Processed Data
 
-Core processed outputs in `data/processed/`:
+Core tracked snapshot outputs in `data/processed/`:
 
 | Source | Files | Key Outputs |
 |--------|-------|-------------|
@@ -430,9 +452,9 @@ Core processed outputs in `data/processed/`:
 
 ## Status
 
-**Active development.** All 9 data sources are acquired and parsed, and the cross-source analysis runs end-to-end. The 13F fetcher now uses a rolling 2-year window (currently 2024–2026) with 289,025 amendment-deduped holdings across 8 funds. All fetchers use dynamic date ranges. 32 tests passing, ruff-clean codebase. Next: decompose the derivatives black box and map the counterparty network.
+**Active development.** All 9 data sources are acquired and parsed, the cross-source analysis runs end-to-end, and the public artifact path is now `python -m src.pipeline --artifacts`. The current bundled local 13F window spans **2024Q1–2025Q4** with **384,723** amendment-deduped rows (**283,362** long equity/ETF positions). Tracked figures, reports, and the notebook are regenerated from the compact processed snapshot, and headline numbers are traced through `outputs/reports/claims_ledger.csv`.
 
-> **Note:** 13F holdings (`data/raw/13f_all_holdings.csv`) are not bundled at full size in the repository. Run `/fetch-13f` (or `python -m src.data.fetch --13f`) to populate the rolling 2-year window. Cross-source tests like H7 will report "Insufficient overlapping quarters" until the 13F date range overlaps with Form PF data.
+> **Note:** `data/raw/13f_all_holdings.csv` is not treated as canonical if fresher per-fund caches exist. The loader prefers the newest coherent local 13F window and the artifact pipeline snapshots that into `data/processed/13f_holdings.csv`.
 
 ## License & Citation
 

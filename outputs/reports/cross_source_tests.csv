@@ -1,0 +1,19 @@
+test_id,description,statistic,p_value,result,interpretation
+H1,Cointegration: Z.1 total assets ~ Form PF GAV,-2.7774554684204085,0.17296336544700935,FAIL,Not cointegrated at 5%
+H2,Ratio stability: Z.1 total assets / Form PF GAV,-0.15472632178018328,0.9437073397266929,FAIL,Ratio is non-stationary (relationship drifts)
+H3,Equivalence: CFTC vs DTCC cleared % (10pp margin),0.2338229194242354,0.9933282155345765,FAIL,Cannot confirm equivalence within 10pp
+H4,Granger causality: Form PF GAV/NAV -> Z.1 leverage,2.602462256180758,0.08600063174770672,FAIL,No Granger causality (best lag=2)
+H5,Cross-corr: FCM customer seg growth vs COT net growth,0.5802324524290059,0.02960708403577986,PASS,FCM leads COT by 1Q (r=0.580)
+H6,Event study: Form PF liquidity mismatch vs VIX > 30,-2.99797332969158,0.004566752050539134,PASS,"30-day liquidity gap worsens in high-VIX quarters (high-VIX=0.442, low-VIX=0.475)"
+H7,Spearman corr: 13F vs Form PF top-fund concentration,-0.9486832980505137,0.013846832988859102,PASS,Significant correlation (rho=-0.949)
+H8,Granger causality: VIX -> Z.1 leverage change,4.637013861567405,0.03645144345364516,PASS,VIX Granger-causes leverage change at lag 1 (F=4.64)
+ADF,ADF stationarity: Z.1 leverage ratio,-2.410375500418078,0.13882938896361313,FAIL,Non-stationary (ADF=-2.410)
+MK,Mann-Kendall trend: Z.1 leverage ratio,0.04784313725490197,0.6202790654903347,FAIL,No significant trend (tau=0.048)
+ADF,ADF stationarity: Form PF GAV,1.0336395540040106,0.9946085042434982,FAIL,Non-stationary (ADF=1.034)
+MK,Mann-Kendall trend: Form PF GAV,0.9132653061224488,2.088764326817388e-20,PASS,Significant increasing trend (tau=0.913)
+ADF,ADF stationarity: Form PF GAV/NAV ratio,1.0005389543209544,0.9942716318877619,FAIL,Non-stationary (ADF=1.001)
+MK,Mann-Kendall trend: Form PF GAV/NAV ratio,0.6785714285714285,6.043140374289671e-12,PASS,Significant increasing trend (tau=0.679)
+ADF,ADF stationarity: VIX mean,-3.109599136539879,0.025850917043074677,PASS,Stationary at 5% (ADF=-3.110)
+MK,Mann-Kendall trend: VIX mean,0.2772133526850508,0.0033873466972591895,PASS,Significant increasing trend (tau=0.277)
+ADF,ADF stationarity: CFTC leveraged fund net,-1.5427895842781667,0.5122478466174893,FAIL,Non-stationary (ADF=-1.543)
+MK,Mann-Kendall trend: CFTC leveraged fund net,-0.6250000000000001,6.114836359111632e-08,PASS,Significant decreasing trend (tau=-0.625)

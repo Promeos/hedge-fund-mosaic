@@ -1,0 +1,36 @@
+investment_type,month,long_notional,short_notional,net_exposure
+Foreign Exchange Derivatives,2025-03,2953,2016.0,937.0
+Non-Financial Listed Equities,2025-03,1828,945.0,883.0
+U.S. Treasury Securities,2025-03,2138,1405.0,733.0
+Non-Financial Unlisted Equities,2025-03,592,1.0,591.0
+Leveraged Loans,2025-03,388,11.0,377.0
+Cash/Cash Equivalents - Other,2025-03,380,81.0,299.0
+Cash/Cash Equivalents - MMFs,2025-03,185,0.0,185.0
+Financial Listed Equities,2025-03,301,140.0,161.0
+MBS,2025-03,209,51.0,158.0
+Other Loans (Excluding Repo),2025-03,172,17.0,155.0
+Non-Financial Convertible Bonds,2025-03,150,2.0,148.0
+Non-Financial Corporate Bonds,2025-03,228,98.0,130.0
+Sovereign Bonds - Other,2025-03,210,83.0,127.0
+Other,2025-03,132,31.0,101.0
+Cash/Cash Equivalents - Deposits,2025-03,236,138.0,98.0
+Sovereign Bonds - Non-U.S. G10,2025-03,985,915.0,70.0
+Non-Financial Equity Derivatives,2025-03,1141,1084.0,57.0
+Commodity Derivatives,2025-03,270,217.0,53.0
+Other ABS/Structured Products,2025-03,68,19.0,49.0
+Financial Corporate Bonds,2025-03,66,18.0,48.0
+Financial Unlisted Equities,2025-03,46,0.0,46.0
+Other Derivatives,2025-03,179,139.0,40.0
+CDO/CLO,2025-03,40,5.0,35.0
+U.S. Agency and GSE Securities,2025-03,73,42.0,31.0
+U.S. State and Local Bonds,2025-03,18,1.0,17.0
+Physical Commodities,2025-03,12,0.0,12.0
+Registered Investment Companies,2025-03,16,4.0,12.0
+Financial Convertible Bonds,2025-03,12,0.0,12.0
+Financial Equity Derivatives,2025-03,92,86.0,6.0
+Non-U.S. Currency Holdings,2025-03,129,137.0,-8.0
+Credit Derivatives ,2025-03,517,639.0,-122.0
+Interest Rate Derivatives,2025-03,4782,4928.0,-146.0
+Repurchase Agreements,2025-03,1118,2615.0,-1497.0
+Other Private Funds,2025-03,212,,
+Physical Real Estate,2025-03,179,,
