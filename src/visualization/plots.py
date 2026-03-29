@@ -77,6 +77,15 @@ def _save(fig, save_path):
         fig.savefig(save_path, bbox_inches="tight", dpi=150)
 
 
+def _finish(fig, save_path):
+    """Save figure and show interactively or close for batch runs."""
+    _save(fig, save_path)
+    if save_path is None:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
 # Tick formatters
 fmt_billions = FuncFormatter(lambda x, _: f"${x:,.0f}B")
 fmt_trillions = FuncFormatter(
@@ -145,8 +154,7 @@ def plot_total_assets(df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_pct)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_asset_composition(df, save_path=None):
@@ -187,8 +195,7 @@ def plot_asset_composition(df, save_path=None):
     _polish(ax2, ylabel_fmt=fmt_pct)
 
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_debt_securities(df, save_path=None):
@@ -212,8 +219,7 @@ def plot_debt_securities(df, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_liability_structure(df, save_path=None):
@@ -249,8 +255,7 @@ def plot_liability_structure(df, save_path=None):
     _polish(ax2, ylabel_fmt=fmt_ratio)
 
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_balance_sheet_overview(df, save_path=None):
@@ -270,8 +275,7 @@ def plot_balance_sheet_overview(df, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_trillions)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_derivative_exposure(df, save_path=None):
@@ -306,8 +310,7 @@ def plot_derivative_exposure(df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_pct)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_borrowing_patterns(df, save_path=None):
@@ -332,8 +335,7 @@ def plot_borrowing_patterns(df, save_path=None):
     _polish(ax2, ylabel_fmt=fmt_pct)
 
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_correlation_heatmap(df, cols=None, save_path=None):
@@ -363,8 +365,7 @@ def plot_correlation_heatmap(df, cols=None, save_path=None):
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 # ---------------------------------------------------------------------------
@@ -459,8 +460,12 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
 
     fig.align_ylabels()
     plt.tight_layout(rect=[0, 0.05, 1, 0.95])
-    fig.savefig(save_path, bbox_inches="tight", dpi=200) if save_path else None
-    plt.show()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        fig.savefig(save_path, bbox_inches="tight", dpi=200)
+        plt.close(fig)
+    else:
+        plt.show()
 
 
 def plot_strategy_allocation(df, save_path=None):
@@ -491,8 +496,7 @@ def plot_strategy_allocation(df, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_notional_exposure(df, save_path=None):
@@ -537,8 +541,7 @@ def plot_notional_exposure(df, save_path=None):
     ax.yaxis.set_major_formatter(fmt_billions)
     ax.tick_params(labelsize=10)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_concentration_trend(df, save_path=None):
@@ -598,8 +601,7 @@ def plot_concentration_trend(df, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_pct)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_liquidity_mismatch(df, save_path=None):
@@ -655,8 +657,7 @@ def plot_liquidity_mismatch(df, save_path=None):
 
     fig.suptitle("Form PF — Liquidity at 30 Days by Type", fontsize=14, y=1.02)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
@@ -728,8 +729,7 @@ def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_pct)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_fcm_capital(df, save_path=None):
@@ -790,8 +790,7 @@ def plot_fcm_capital(df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_ratio)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_fcm_concentration(df, save_path=None):
@@ -833,8 +832,7 @@ def plot_fcm_concentration(df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_pct)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_dtcc_summary(df, save_path=None):
@@ -905,8 +903,7 @@ def plot_dtcc_summary(df, save_path=None):
     ax2.tick_params(labelsize=10)
 
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
@@ -950,8 +947,7 @@ def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_ratio)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_swaps_notional(df, save_path=None):
@@ -996,8 +992,7 @@ def plot_swaps_notional(df, save_path=None):
     add_event_annotations(ax)
     _polish(ax, ylabel_fmt=fmt_billions)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 # ---------------------------------------------------------------------------
@@ -1047,8 +1042,7 @@ def plot_granger_heatmap(p_matrix, save_path=None):
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_impulse_response(irf_df, variables, save_path=None):
@@ -1077,8 +1071,7 @@ def plot_impulse_response(irf_df, variables, save_path=None):
 
     fig.suptitle("VAR Impulse Response Functions (1 std dev shock)", fontsize=14, y=1.01)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_monte_carlo(mc_results, variable, save_path=None):
@@ -1144,8 +1137,7 @@ def plot_monte_carlo(mc_results, variable, save_path=None):
     ax2.xaxis.set_major_formatter(fmt_pct)
 
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_structural_breaks(series, breaks_result, save_path=None):
@@ -1174,8 +1166,7 @@ def plot_structural_breaks(series, breaks_result, save_path=None):
     ax.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
     _polish(ax)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_strategy_hhi(hhi_df, save_path=None):
@@ -1207,8 +1198,7 @@ def plot_strategy_hhi(hhi_df, save_path=None):
     ax2.yaxis.set_major_formatter(fmt_pct)
     _merge_legends(ax1, ax2)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)
 
 
 def plot_liquidity_mismatch_detail(liquidity_results, save_path=None):
@@ -1247,5 +1237,4 @@ def plot_liquidity_mismatch_detail(liquidity_results, save_path=None):
 
     fig.suptitle("Form PF — Liquidity Cushion (Portfolio vs Investor)", fontsize=14, y=1.02)
     plt.tight_layout()
-    _save(fig, save_path)
-    plt.show()
+    _finish(fig, save_path)

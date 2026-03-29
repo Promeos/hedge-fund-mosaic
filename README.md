@@ -6,6 +6,8 @@ Piecing together the U.S. hedge fund industry from 9 public regulatory data sour
 
 An open-source intelligence project assembling the financial picture of U.S. hedge funds — balance sheets, derivatives, borrowing, positioning, and fund-level holdings — from fragments no one else combines.
 
+**Reproducibility:** Every claim is backed by [`claims_ledger.csv`](outputs/reports/claims_ledger.csv) with source file, cell reference, and refresh timestamp. Pipeline manifest: [`run_manifest.json`](outputs/reports/run_manifest.json).
+
 ![Form PF — Hedge Fund Leverage](docs/hero_form_pf_leverage.png)
 
 ## The Thesis
