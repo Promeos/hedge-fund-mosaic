@@ -8,6 +8,8 @@ Usage:
     python -m src.pipeline --artifacts  # regenerate public figures, reports, notebook
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import sys
@@ -21,7 +23,7 @@ RAW_DIR = os.path.join(ROOT_DIR, "data", "raw")
 PROCESSED_DIR = os.path.join(ROOT_DIR, "data", "processed")
 
 
-def step_fetch():
+def step_fetch() -> None:
     """Fetch raw data from all external sources."""
     from fredapi import Fred
 
@@ -80,7 +82,7 @@ def step_fetch():
     fetch_all_fcm_reports()
 
 
-def step_parse():
+def step_parse() -> None:
     """Parse all raw data into processed CSVs."""
     from src.data.parse_dtcc import parse_all_dtcc
     from src.data.parse_fcm import parse_all_fcm
@@ -107,7 +109,7 @@ def step_parse():
         raise RuntimeError(f"Parsing failed for: {', '.join(failures)}")
 
 
-def step_analyze():
+def step_analyze() -> dict[str, object]:
     """Compute derived metrics and run analysis reports used by public artifacts."""
     from src.analysis.advanced import run_all_advanced
     from src.analysis.cross_source import run_full_analysis
@@ -147,7 +149,7 @@ def step_analyze():
     }
 
 
-def step_artifacts(analysis_results=None):
+def step_artifacts(analysis_results: dict[str, object] | None = None) -> object:
     """Regenerate public figures, rendered notebook, and provenance artifacts."""
     from src.artifacts import refresh_public_artifacts
 
@@ -155,7 +157,7 @@ def step_artifacts(analysis_results=None):
     return refresh_public_artifacts(analysis_results=analysis_results)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Hedge Fund Mosaic pipeline")
     parser.add_argument("--fetch", action="store_true", help="Fetch raw data only")
     parser.add_argument("--parse", action="store_true", help="Parse raw data only")

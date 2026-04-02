@@ -5,8 +5,12 @@ Computes leverage ratios, asset allocation percentages, borrowing breakdowns
 from FRED Z.1 quarterly observations. All monetary values in billions USD.
 """
 
+from __future__ import annotations
 
-def compute_derived_metrics(df):
+import pandas as pd
+
+
+def compute_derived_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """Compute all derived metrics from raw hedge fund balance sheet data.
 
     Expects a DataFrame with FRED Z.1 column names (in billions USD).
@@ -53,7 +57,7 @@ def compute_derived_metrics(df):
     return df
 
 
-def compute_leverage_stats(df):
+def compute_leverage_stats(df: pd.DataFrame) -> pd.Series:
     """Summary statistics for leverage ratio over time."""
     stats = df["leverage_ratio"].describe()
     stats["peak_date"] = df["leverage_ratio"].idxmax()
@@ -61,7 +65,7 @@ def compute_leverage_stats(df):
     return stats
 
 
-def compute_correlation_matrix(df, cols=None):
+def compute_correlation_matrix(df: pd.DataFrame, cols: list[str] | None = None) -> pd.DataFrame:
     """Correlation matrix among balance sheet components."""
     if cols is None:
         cols = [

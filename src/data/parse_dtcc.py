@@ -8,6 +8,8 @@ Produces daily and quarterly summaries by asset class, clearing status, and prod
 Data: ~1,825 daily files across 5 asset classes (2025-03-13 onward).
 """
 
+from __future__ import annotations
+
 import csv
 import gc
 import os
@@ -21,7 +23,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "d
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed")
 
 
-def _extract_date_from_filename(filename):
+def _extract_date_from_filename(filename: str) -> str | None:
     """Extract date from CFTC_CUMULATIVE_{CLASS}_{YYYY}_{MM}_{DD}.zip"""
     parts = filename.replace(".zip", "").split("_")
     try:
@@ -31,14 +33,14 @@ def _extract_date_from_filename(filename):
         return None
 
 
-def _extract_asset_class(filename):
+def _extract_asset_class(filename: str) -> str:
     """Extract asset class from filename."""
     parts = filename.replace(".zip", "").split("_")
     # CFTC_CUMULATIVE_{CLASS}_{Y}_{M}_{D}
     return parts[2] if len(parts) >= 6 else "UNKNOWN"
 
 
-def parse_single_zip(filepath):
+def parse_single_zip(filepath: str) -> dict[str, object] | None:
     """Parse one DTCC cumulative ZIP file and return aggregated summary.
 
     Uses Python's csv module (not pandas) to stream rows without loading the
@@ -202,7 +204,7 @@ LEGACY_SUMMARY_FIELDS = [
 ]
 
 
-def _canonicalize_summary_row(row):
+def _canonicalize_summary_row(row: dict[str, object]) -> dict[str, object]:
     """Map legacy or current DTCC summary rows onto the canonical schema."""
     if len(row) == len(SUMMARY_FIELDS):
         return dict(zip(SUMMARY_FIELDS, row))
@@ -217,7 +219,7 @@ def _canonicalize_summary_row(row):
     return None
 
 
-def _load_summary_rows(summary_path):
+def _load_summary_rows(summary_path: str) -> list[dict[str, object]]:
     """Read a possibly mixed-schema DTCC summary CSV without failing on old rows."""
     if not os.path.exists(summary_path):
         return []
@@ -234,7 +236,7 @@ def _load_summary_rows(summary_path):
     return rows
 
 
-def _clean_existing_summary(summary_path):
+def _clean_existing_summary(summary_path: str) -> pd.DataFrame:
     """Deduplicate resume state by (date, asset_class) and backfill derived columns."""
     if not os.path.exists(summary_path):
         return pd.DataFrame(columns=SUMMARY_FIELDS)
@@ -257,7 +259,7 @@ def _clean_existing_summary(summary_path):
     return daily
 
 
-def _validate_row(summary):
+def _validate_row(summary: dict[str, object]) -> list[str]:
     """Validate a parsed summary row. Returns list of warnings (empty = OK)."""
     warnings = []
     if summary["trade_count"] <= 0:
@@ -271,7 +273,7 @@ def _validate_row(summary):
     return warnings
 
 
-def parse_all_dtcc(data_dir=None, output_dir=None):
+def parse_all_dtcc(data_dir: str | None = None, output_dir: str | None = None) -> None:
     """Parse all DTCC cumulative ZIP files, streaming rows directly to CSV."""
     if data_dir is None:
         data_dir = DATA_DIR

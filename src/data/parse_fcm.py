@@ -8,10 +8,21 @@ adequacy, customer segregation, and cleared swap segregation.
 Data: 49 monthly files (January 2022 – January 2026), ~100-135 FCMs per month.
 """
 
+from __future__ import annotations
+
 import os
+import warnings
 
 import openpyxl
 import pandas as pd
+
+
+def _validate_schema(df: pd.DataFrame, name: str, required_cols: list[str]) -> None:
+    """Warn if required columns are missing from a DataFrame before CSV export."""
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        warnings.warn(f"{name}: missing expected columns {missing}")
+
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "fcm")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed")
@@ -42,7 +53,7 @@ COLUMN_MAP = {
 }
 
 
-def parse_single_fcm_file(filepath):
+def parse_single_fcm_file(filepath: str) -> pd.DataFrame:
     """Parse one monthly FCM Excel file into a DataFrame."""
     wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
     ws = wb.active
@@ -100,7 +111,7 @@ def parse_single_fcm_file(filepath):
     return df
 
 
-def parse_all_fcm(data_dir=None, output_dir=None):
+def parse_all_fcm(data_dir: str | None = None, output_dir: str | None = None) -> None:
     """Parse all FCM monthly files and produce processed CSVs."""
     if data_dir is None:
         data_dir = DATA_DIR
@@ -109,22 +120,41 @@ def parse_all_fcm(data_dir=None, output_dir=None):
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # Resume support: load existing data and skip already-parsed dates
+    summary_path = os.path.join(output_dir, "fcm_monthly_all.csv")
+    existing_dates: set[str] = set()
+    existing_df = pd.DataFrame()
+    if os.path.exists(summary_path):
+        existing_df = pd.read_csv(summary_path, parse_dates=["as_of_date"])
+        existing_dates = set(existing_df["as_of_date"].dt.strftime("%Y-%m-%d"))
+        print(f"  Resuming: {len(existing_dates)} months already parsed")
+
     files = sorted([f for f in os.listdir(data_dir) if f.endswith(".xlsx")])
     print(f"Parsing {len(files)} FCM monthly reports...")
 
     all_dfs = []
+    skipped = 0
     for f in files:
         filepath = os.path.join(data_dir, f)
         df = parse_single_fcm_file(filepath)
         if not df.empty:
+            file_dates = set(df["as_of_date"].dt.strftime("%Y-%m-%d"))
+            if file_dates.issubset(existing_dates):
+                skipped += 1
+                continue
             all_dfs.append(df)
 
-    if not all_dfs:
+    if skipped:
+        print(f"  Skipped {skipped}/{len(files)} files (already parsed)")
+
+    if not all_dfs and existing_df.empty:
         print("No FCM data parsed!")
         return
 
     # --- All FCMs, all months ---
-    fcm_all = pd.concat(all_dfs, ignore_index=True)
+    if not existing_df.empty:
+        all_dfs.insert(0, existing_df)
+    fcm_all = pd.concat(all_dfs, ignore_index=True) if all_dfs else existing_df
 
     # Normalize broker name inconsistencies
     name_fixes = {
@@ -133,6 +163,7 @@ def parse_all_fcm(data_dir=None, output_dir=None):
     fcm_all["fcm_name"] = fcm_all["fcm_name"].replace(name_fixes)
 
     fcm_all = fcm_all.sort_values(["as_of_date", "fcm_name"])
+    _validate_schema(fcm_all, "fcm_monthly_all", ["as_of_date", "fcm_name", "adj_net_capital", "customer_assets_seg"])
     fcm_all.to_csv(os.path.join(output_dir, "fcm_monthly_all.csv"), index=False)
     print(f"  Saved fcm_monthly_all.csv ({len(fcm_all)} rows)")
 

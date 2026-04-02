@@ -5,6 +5,8 @@ structural break detection, Monte Carlo stress testing, and deep-dive
 analyses on Form PF liquidity, strategy rotation, and FCM concentration.
 """
 
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -24,7 +26,7 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "rep
 FIGURES_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "figures")
 
 
-def _quarter_str_to_timestamp(series):
+def _quarter_str_to_timestamp(series: pd.Series) -> pd.DatetimeIndex:
     return pd.PeriodIndex(series, freq="Q").to_timestamp("Q")
 
 
@@ -33,7 +35,9 @@ def _quarter_str_to_timestamp(series):
 # ---------------------------------------------------------------------------
 
 
-def granger_causality_matrix(aligned, variables=None, maxlag=4):
+def granger_causality_matrix(
+    aligned: pd.DataFrame, variables: list[str] | None = None, maxlag: int = 4
+) -> pd.DataFrame:
     """Pairwise Granger causality tests across multiple variables.
 
     Returns DataFrame of p-values (row causes column).
@@ -95,7 +99,9 @@ def granger_causality_matrix(aligned, variables=None, maxlag=4):
 # ---------------------------------------------------------------------------
 
 
-def johansen_cointegration(aligned, variables=None, det_order=0, k_ar_diff=2):
+def johansen_cointegration(
+    aligned: pd.DataFrame, variables: list[str] | None = None, det_order: int = 0, k_ar_diff: int = 2
+) -> dict[str, object]:
     """Johansen cointegration test for multiple time series.
 
     Returns dict with test statistics, critical values, and number of
@@ -152,7 +158,9 @@ def johansen_cointegration(aligned, variables=None, det_order=0, k_ar_diff=2):
 # ---------------------------------------------------------------------------
 
 
-def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
+def var_impulse_response(
+    aligned: pd.DataFrame, variables: list[str] | None = None, maxlags: int = 4, irf_periods: int = 8
+) -> pd.DataFrame:
     """Fit VAR model and compute impulse response functions.
 
     Returns dict with model summary, IRF data, and forecast error
@@ -254,7 +262,9 @@ def var_impulse_response(aligned, variables=None, maxlags=4, irf_periods=8):
 # ---------------------------------------------------------------------------
 
 
-def detect_structural_breaks(series, name="series", max_breaks=3, min_segment=8):
+def detect_structural_breaks(
+    series: pd.Series, name: str = "series", max_breaks: int = 3, min_segment: int = 8
+) -> dict[str, object]:
     """Detect structural breaks using a CUSUM-based approach with
     iterative Chow-like splitting.
 
@@ -360,7 +370,9 @@ def detect_structural_breaks(series, name="series", max_breaks=3, min_segment=8)
 # ---------------------------------------------------------------------------
 
 
-def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8, variables=None):
+def monte_carlo_stress_test(
+    aligned: pd.DataFrame, n_simulations: int = 10000, n_quarters: int = 8, variables: list[str] | None = None
+) -> dict[str, object]:
     """Monte Carlo simulation of multi-variable paths using bootstrapped
     historical quarterly changes.
 
@@ -443,7 +455,7 @@ def monte_carlo_stress_test(aligned, n_simulations=10000, n_quarters=8, variable
 # ---------------------------------------------------------------------------
 
 
-def liquidity_deep_dive(sources):
+def liquidity_deep_dive(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """Analyze Form PF liquidity mismatch dynamics across time horizons.
 
     Flags quarters with dangerous mismatches (investor can redeem faster
@@ -507,7 +519,7 @@ def liquidity_deep_dive(sources):
 # ---------------------------------------------------------------------------
 
 
-def strategy_rotation_analysis(sources):
+def strategy_rotation_analysis(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """Analyze Form PF strategy allocation changes and compute HHI over time."""
     if "form_pf_strategy" not in sources:
         print("Strategy rotation: missing form_pf_strategy data")
@@ -577,7 +589,7 @@ def strategy_rotation_analysis(sources):
 # ---------------------------------------------------------------------------
 
 
-def fcm_concentration_analysis(sources):
+def fcm_concentration_analysis(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """Analyze FCM market concentration trends — HHI, top-5 share, Gini."""
     if "fcm_concentration" not in sources:
         print("FCM concentration: missing data")
@@ -622,7 +634,7 @@ def fcm_concentration_analysis(sources):
 # ---------------------------------------------------------------------------
 
 
-def thirteenf_concentration(sources):
+def thirteenf_concentration(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """Analyze 13F equity holdings concentration across top funds."""
     holdings = load_best_13f_holdings(RAW, expected_funds=HEDGE_FUND_CIKS)
     if holdings.empty:
@@ -724,7 +736,7 @@ def thirteenf_concentration(sources):
 # ---------------------------------------------------------------------------
 
 
-def run_all_advanced(save=True):
+def run_all_advanced(save: bool = True) -> dict[str, object]:
     """Run all advanced analyses and save results."""
     from src.analysis.cross_source import align_quarterly, load_all_sources
 
@@ -843,7 +855,7 @@ def run_all_advanced(save=True):
     return all_results
 
 
-def _write_report(results):
+def _write_report(results: dict[str, object]) -> None:
     """Write a comprehensive text report of all advanced analysis results."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     report_path = os.path.join(OUTPUT_DIR, "advanced_analysis.txt")

@@ -9,6 +9,8 @@ All data is cached to data/raw/ to avoid redundant API calls.
 Rate limits: 0.2s FRED, 0.15s SEC EDGAR.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -18,10 +20,14 @@ import warnings
 import xml.etree.ElementTree as ET
 import zipfile
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import requests
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from fredapi import Fred
 
 try:
     from fredapi import Fred
@@ -89,7 +95,7 @@ FORM_13F_DOLLAR_CUTOFF = pd.Timestamp("2022-10-17")
 THIRTEENF_WINDOW_RE = re.compile(r"^13f_(?P<fund>.+)_(?P<start>\d{8})_(?P<end>\d{8})\.csv$")
 
 
-def normalize_13f_holdings(df):
+def normalize_13f_holdings(df: pd.DataFrame) -> pd.DataFrame:
     """Backfill a canonical dollar-denominated value column for 13F holdings.
 
     The SEC changed the XML ``value`` element from thousands to nearest dollar
@@ -137,7 +143,7 @@ def normalize_13f_holdings(df):
     return out
 
 
-def _select_best_13f_window(cache_dir, expected_funds=None):
+def _select_best_13f_window(cache_dir: str, expected_funds: dict[str, str] | None = None) -> list[str]:
     """Choose the newest complete per-fund 13F cache window available on disk."""
     if not os.path.isdir(cache_dir):
         return []
@@ -165,7 +171,7 @@ def _select_best_13f_window(cache_dir, expected_funds=None):
     return sorted(paths)
 
 
-def load_best_13f_holdings(cache_dir="data/raw", expected_funds=None):
+def load_best_13f_holdings(cache_dir: str = "data/raw", expected_funds: dict[str, str] | None = None) -> pd.DataFrame:
     """Load the newest coherent 13F holdings snapshot available locally.
 
     Prefer the latest complete set of per-fund window caches over the aggregate
@@ -188,7 +194,7 @@ def load_best_13f_holdings(cache_dir="data/raw", expected_funds=None):
     return pd.DataFrame()
 
 
-def rebuild_13f_aggregate(cache_dir="data/raw", expected_funds=None):
+def rebuild_13f_aggregate(cache_dir: str = "data/raw", expected_funds: dict[str, str] | None = None) -> pd.DataFrame:
     """Rebuild ``13f_all_holdings.csv`` from the newest local per-fund caches."""
     holdings = load_best_13f_holdings(cache_dir=cache_dir, expected_funds=expected_funds)
     if holdings.empty:
@@ -204,7 +210,7 @@ def rebuild_13f_aggregate(cache_dir="data/raw", expected_funds=None):
 # ---------------------------------------------------------------------------
 
 
-def fetch_hedge_fund_data(fred_client, series_map, cache_path=None):
+def fetch_hedge_fund_data(fred_client: Fred, series_map: dict[str, str], cache_path: str | None = None) -> pd.DataFrame:
     """Fetch all hedge fund balance sheet series from FRED and combine into a DataFrame."""
     if cache_path and os.path.exists(cache_path):
         print(f"Loading cached data from {cache_path}")
@@ -247,7 +253,7 @@ def fetch_hedge_fund_data(fred_client, series_map, cache_path=None):
 # ---------------------------------------------------------------------------
 
 
-def fetch_vix_data(fred_client, cache_path=None):
+def fetch_vix_data(fred_client: Fred, cache_path: str | None = None) -> pd.DataFrame:
     """Fetch VIX daily data from FRED, aggregate to quarterly."""
     if cache_path and os.path.exists(cache_path):
         print(f"Loading cached VIX data from {cache_path}")
@@ -277,7 +283,9 @@ def fetch_vix_data(fred_client, cache_path=None):
 # ---------------------------------------------------------------------------
 
 
-def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, end_date=None):
+def fetch_13f_holdings(
+    cik: str, fund_name: str, cache_dir: str = "data/raw", start_date: str | None = None, end_date: str | None = None
+) -> pd.DataFrame:
     """Fetch 13F-HR filing data from SEC EDGAR for a given fund.
 
     Args:
@@ -469,7 +477,7 @@ def fetch_13f_holdings(cik, fund_name, cache_dir="data/raw", start_date=None, en
 # ---------------------------------------------------------------------------
 
 
-def fetch_cftc_data(cache_path=None):
+def fetch_cftc_data(cache_path: str | None = None) -> pd.DataFrame:
     """Fetch CFTC Traders in Financial Futures report for equity index futures."""
     if cache_path and os.path.exists(cache_path):
         print(f"Loading cached CFTC data from {cache_path}")
@@ -540,7 +548,7 @@ def fetch_cftc_data(cache_path=None):
 # ---------------------------------------------------------------------------
 
 
-def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
+def fetch_form_adv(cik: str, fund_name: str, cache_dir: str = "data/raw") -> dict[str, object]:
     """Fetch Form ADV data from SEC EDGAR for a given fund.
 
     Form ADV contains: AUM, employee count, types of clients,
@@ -634,7 +642,7 @@ def fetch_form_adv(cik, fund_name, cache_dir="data/raw"):
         return {}
 
 
-def fetch_all_fund_profiles(cache_dir="data/raw"):
+def fetch_all_fund_profiles(cache_dir: str = "data/raw") -> dict[str, object]:
     """Fetch submission profiles for all tracked hedge funds."""
     print("Fetching fund profiles from SEC EDGAR Submissions API...")
     profiles = {}

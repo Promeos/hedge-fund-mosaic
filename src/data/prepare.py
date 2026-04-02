@@ -5,10 +5,12 @@ handling date alignment and numeric coercion. Output is the canonical
 analysis-ready DataFrame used by metrics and visualization modules.
 """
 
+from __future__ import annotations
+
 import pandas as pd
 
 
-def prep_financial_report(df):
+def prep_financial_report(df: pd.DataFrame) -> pd.DataFrame:
     """Parse dates and coerce numeric columns. NaN is preserved to distinguish
     missing data from true zeros — critical for ratio and leverage calculations."""
     date_col = df.columns[1]
@@ -20,7 +22,7 @@ def prep_financial_report(df):
     return df
 
 
-def load_fred_balance_sheet(filepath):
+def load_fred_balance_sheet(filepath: str) -> pd.DataFrame:
     """Load FRED Z.1 hedge fund balance sheet data, filtering pre-2012 empty rows.
 
     The Z.1 table B.101.f (Domestic Hedge Funds) only started in Q4 2012.
@@ -33,7 +35,7 @@ def load_fred_balance_sheet(filepath):
     return df
 
 
-def align_vix_to_fred(df_fred, df_vix):
+def align_vix_to_fred(df_fred: pd.DataFrame, df_vix: pd.DataFrame) -> pd.DataFrame:
     """Merge VIX quarterly data into FRED balance sheet by aligning date conventions.
 
     FRED uses quarter-start dates (2024-01-01 = Q1), VIX uses quarter-end

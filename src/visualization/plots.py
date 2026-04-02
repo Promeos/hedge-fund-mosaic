@@ -6,7 +6,10 @@ comparisons. All charts use seaborn-v0_8-whitegrid style, (14, 6) figures,
 DPI 100, and include market event annotations. Output to outputs/figures/.
 """
 
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -14,6 +17,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter, MaxNLocator
+
+if TYPE_CHECKING:
+    import matplotlib.axes
+    import matplotlib.figure
 
 # ---------------------------------------------------------------------------
 # Style defaults
@@ -42,7 +49,7 @@ MARKET_EVENTS = {
 }
 
 
-def setup_style():
+def setup_style() -> None:
     """Apply default plotting style."""
     plt.style.use("seaborn-v0_8-whitegrid")
     plt.rcParams["figure.figsize"] = (14, 6)
@@ -57,7 +64,7 @@ def setup_style():
 # ---------------------------------------------------------------------------
 
 
-def add_event_annotations(ax, ypos_frac=0.95):
+def add_event_annotations(ax: matplotlib.axes.Axes, ypos_frac: float = 0.95) -> None:
     """Add vertical lines for key market events."""
     ylim = ax.get_ylim()
     ypos = ylim[0] + (ylim[1] - ylim[0]) * ypos_frac
@@ -70,14 +77,14 @@ def add_event_annotations(ax, ypos_frac=0.95):
             pass
 
 
-def _save(fig, save_path):
+def _save(fig: matplotlib.figure.Figure, save_path: str | None) -> None:
     """Save figure if path is provided."""
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         fig.savefig(save_path, bbox_inches="tight", dpi=150)
 
 
-def _finish(fig, save_path):
+def _finish(fig: matplotlib.figure.Figure, save_path: str | None) -> None:
     """Save figure and show interactively or close for batch runs."""
     _save(fig, save_path)
     if save_path is None:
@@ -95,7 +102,7 @@ fmt_pct = FuncFormatter(lambda x, _: f"{x:.0f}%")
 fmt_ratio = FuncFormatter(lambda x, _: f"{x:.2f}x")
 
 
-def _polish(ax, ylabel_fmt=None, date_axis=True):
+def _polish(ax: matplotlib.axes.Axes, ylabel_fmt: FuncFormatter | None = None, date_axis: bool = True) -> None:
     """Apply standard formatting polish to an axes.
 
     Parameters
@@ -117,7 +124,7 @@ def _polish(ax, ylabel_fmt=None, date_axis=True):
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
 
-def _merge_legends(ax1, ax2, **kwargs):
+def _merge_legends(ax1: matplotlib.axes.Axes, ax2: matplotlib.axes.Axes, **kwargs: object) -> None:
     """Combine legends from a dual-axis chart onto ax1."""
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -133,7 +140,7 @@ def _merge_legends(ax1, ax2, **kwargs):
 # ---------------------------------------------------------------------------
 
 
-def plot_total_assets(df, save_path=None):
+def plot_total_assets(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Total assets with QoQ growth bars (dual axis)."""
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
@@ -157,7 +164,7 @@ def plot_total_assets(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_asset_composition(df, save_path=None):
+def plot_asset_composition(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Stacked area chart of asset composition."""
     asset_cols = {
         "Corporate equities; asset": "Corporate Equities",
@@ -198,7 +205,7 @@ def plot_asset_composition(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_debt_securities(df, save_path=None):
+def plot_debt_securities(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Treasury vs corporate bond breakdown."""
     fig, ax = plt.subplots(figsize=(14, 6))
 
@@ -222,7 +229,7 @@ def plot_debt_securities(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_liability_structure(df, save_path=None):
+def plot_liability_structure(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Stacked liability composition + leverage ratio."""
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), height_ratios=[2, 1], sharex=True)
 
@@ -258,7 +265,7 @@ def plot_liability_structure(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_balance_sheet_overview(df, save_path=None):
+def plot_balance_sheet_overview(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Three-line overlay — assets, liabilities, net assets."""
     fig, ax = plt.subplots(figsize=(14, 7))
 
@@ -278,7 +285,7 @@ def plot_balance_sheet_overview(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_derivative_exposure(df, save_path=None):
+def plot_derivative_exposure(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Derivative exposure with ratio to total assets."""
     fig, ax1 = plt.subplots(figsize=(14, 6))
 
@@ -313,7 +320,7 @@ def plot_derivative_exposure(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_borrowing_patterns(df, save_path=None):
+def plot_borrowing_patterns(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Domestic vs foreign borrowing side-by-side."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
@@ -338,7 +345,7 @@ def plot_borrowing_patterns(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_correlation_heatmap(df, cols=None, save_path=None):
+def plot_correlation_heatmap(df: pd.DataFrame, cols: list[str] | None = None, save_path: str | None = None) -> None:
     """Correlation matrix heatmap of balance sheet components."""
     if cols is None:
         cols = [
@@ -373,12 +380,12 @@ def plot_correlation_heatmap(df, cols=None, save_path=None):
 # ---------------------------------------------------------------------------
 
 
-def _parse_quarter(series):
+def _parse_quarter(series: pd.Series) -> pd.DatetimeIndex:
     """Convert quarter strings like '2013Q1' to end-of-quarter timestamps."""
     return pd.PeriodIndex(series, freq="Q").to_timestamp("Q")
 
 
-def _add_event_spans(axes, label_ax=None):
+def _add_event_spans(axes: list[matplotlib.axes.Axes], label_ax: matplotlib.axes.Axes | None = None) -> None:
     """Add shaded event spans to one or more axes, with labels on label_ax only."""
     bbox = dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="none", alpha=0.7)
     # Stagger y-positions to avoid label overlap on closely spaced events
@@ -396,7 +403,7 @@ def _add_event_spans(axes, label_ax=None):
             )
 
 
-def plot_form_pf_leverage(df, z1_df=None, save_path=None):
+def plot_form_pf_leverage(df: pd.DataFrame, z1_df: pd.DataFrame | None = None, save_path: str | None = None) -> None:
     """Form PF hedge fund leverage — two-panel: assets (top) and leverage ratios (bottom).
 
     Parameters
@@ -468,7 +475,7 @@ def plot_form_pf_leverage(df, z1_df=None, save_path=None):
         plt.show()
 
 
-def plot_strategy_allocation(df, save_path=None):
+def plot_strategy_allocation(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Stacked area chart of hedge fund NAV by strategy over time.
 
     Parameters
@@ -499,7 +506,7 @@ def plot_strategy_allocation(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_notional_exposure(df, save_path=None):
+def plot_notional_exposure(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Grouped bar chart of notional exposure by investment type.
 
     Parameters
@@ -544,7 +551,7 @@ def plot_notional_exposure(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_concentration_trend(df, save_path=None):
+def plot_concentration_trend(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Multi-line chart of hedge fund concentration (Top 10/25/50 NAV share).
 
     Parameters
@@ -604,7 +611,7 @@ def plot_concentration_trend(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_liquidity_mismatch(df, save_path=None):
+def plot_liquidity_mismatch(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Liquidity at 30 days by type — investor, portfolio, financing.
 
     Parameters
@@ -660,7 +667,9 @@ def plot_liquidity_mismatch(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
+def plot_clearing_rate(
+    swaps_df: pd.DataFrame, dtcc_df: pd.DataFrame | None = None, save_path: str | None = None
+) -> None:
     """OTC derivatives clearing rates over time.
 
     Parameters
@@ -732,7 +741,7 @@ def plot_clearing_rate(swaps_df, dtcc_df=None, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_fcm_capital(df, save_path=None):
+def plot_fcm_capital(df: pd.DataFrame, save_path: str | None = None) -> None:
     """FCM industry capital and adequacy ratio.
 
     Parameters
@@ -793,7 +802,7 @@ def plot_fcm_capital(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_fcm_concentration(df, save_path=None):
+def plot_fcm_concentration(df: pd.DataFrame, save_path: str | None = None) -> None:
     """FCM market concentration — HHI and top-5 share.
 
     Parameters
@@ -835,7 +844,7 @@ def plot_fcm_concentration(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_dtcc_summary(df, save_path=None):
+def plot_dtcc_summary(df: pd.DataFrame, save_path: str | None = None) -> None:
     """DTCC quarterly summary — notional by asset class and clearing rate trend."""
     required = {"quarter", "asset_class"}
     if not required.issubset(df.columns):
@@ -906,7 +915,7 @@ def plot_dtcc_summary(df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
+def plot_cross_source_leverage(z1_df: pd.DataFrame, pf_df: pd.DataFrame, save_path: str | None = None) -> None:
     """Cross-source leverage comparison — Z.1 vs Form PF.
 
     Parameters
@@ -950,7 +959,7 @@ def plot_cross_source_leverage(z1_df, pf_df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_swaps_notional(df, save_path=None):
+def plot_swaps_notional(df: pd.DataFrame, save_path: str | None = None) -> None:
     """Stacked area chart of OTC swap notional outstanding by asset class.
 
     Parameters
@@ -1000,7 +1009,7 @@ def plot_swaps_notional(df, save_path=None):
 # ---------------------------------------------------------------------------
 
 
-def plot_granger_heatmap(p_matrix, save_path=None):
+def plot_granger_heatmap(p_matrix: pd.DataFrame, save_path: str | None = None) -> None:
     """Heatmap of Granger causality p-values (row causes column)."""
     if p_matrix.empty:
         print("plot_granger_heatmap: empty matrix")
@@ -1045,7 +1054,7 @@ def plot_granger_heatmap(p_matrix, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_impulse_response(irf_df, variables, save_path=None):
+def plot_impulse_response(irf_df: pd.DataFrame, variables: list[str], save_path: str | None = None) -> None:
     """Grid of impulse response functions from VAR model."""
     n = len(variables)
     fig, axes = plt.subplots(n, n, figsize=(4 * n, 3.5 * n), squeeze=False)
@@ -1074,7 +1083,7 @@ def plot_impulse_response(irf_df, variables, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_monte_carlo(mc_results, variable, save_path=None):
+def plot_monte_carlo(mc_results: dict[str, dict], variable: str, save_path: str | None = None) -> None:
     """Fan chart of Monte Carlo simulated paths with percentile bands."""
     if variable not in mc_results:
         print(f"plot_monte_carlo: {variable} not in results")
@@ -1140,7 +1149,7 @@ def plot_monte_carlo(mc_results, variable, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_structural_breaks(series, breaks_result, save_path=None):
+def plot_structural_breaks(series: pd.Series, breaks_result: dict, save_path: str | None = None) -> None:
     """Time series with structural break points and segment means."""
     clean = series.dropna()
     if clean.empty:
@@ -1169,7 +1178,7 @@ def plot_structural_breaks(series, breaks_result, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_strategy_hhi(hhi_df, save_path=None):
+def plot_strategy_hhi(hhi_df: pd.DataFrame, save_path: str | None = None) -> None:
     """Strategy concentration HHI over time with top strategy labels."""
     if hhi_df.empty:
         return
@@ -1201,7 +1210,7 @@ def plot_strategy_hhi(hhi_df, save_path=None):
     _finish(fig, save_path)
 
 
-def plot_liquidity_mismatch_detail(liquidity_results, save_path=None):
+def plot_liquidity_mismatch_detail(liquidity_results: dict[str, pd.DataFrame], save_path: str | None = None) -> None:
     """Liquidity mismatch at 30/90/180 days over time."""
     periods = ["At most 30 days", "At most 90 days", "At most 180 days"]
     available = [p for p in periods if f"mismatch_{p}" in liquidity_results]

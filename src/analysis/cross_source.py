@@ -1,5 +1,7 @@
 """Cross-source reconciliation, alignment, and hypothesis testing for Hedge Fund Mosaic."""
 
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -21,7 +23,7 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "rep
 # ---------------------------------------------------------------------------
 
 
-def load_all_sources():
+def load_all_sources() -> dict[str, pd.DataFrame]:
     """Load all available processed CSVs into a dict of DataFrames.
 
     Returns dict with keys like 'z1', 'form_pf_gav', 'swaps_weekly',
@@ -47,6 +49,7 @@ def load_all_sources():
         "vix": [(PROCESSED, "vix_quarterly.csv"), (RAW, "vix_quarterly.csv")],
         "cot": [(PROCESSED, "cftc_cot.csv"), (RAW, "cftc_cot.csv")],
         "dtcc": [(PROCESSED, "dtcc_daily_summary.csv")],
+        "13f": [(RAW, "13f_all_holdings.csv")],
     }
 
     for key, candidates in file_map.items():
@@ -78,6 +81,8 @@ def load_all_sources():
         sources["fcm_concentration"]["as_of_date"] = pd.to_datetime(sources["fcm_concentration"]["as_of_date"])
     if "dtcc" in sources:
         sources["dtcc"]["date"] = pd.to_datetime(sources["dtcc"]["date"], errors="coerce")
+    if "13f" in sources and "report_period" in sources["13f"].columns:
+        sources["13f"]["report_period"] = _quarter_str_to_timestamp(sources["13f"]["report_period"])
 
     print(f"Loaded {len(sources)} data sources: {list(sources.keys())}")
     return sources
@@ -88,12 +93,12 @@ def load_all_sources():
 # ---------------------------------------------------------------------------
 
 
-def _quarter_str_to_timestamp(series):
+def _quarter_str_to_timestamp(series: pd.Series) -> pd.DatetimeIndex:
     """Convert a Series of '2013Q1'-style strings to quarter-end Timestamps."""
     return pd.PeriodIndex(series, freq="Q").to_timestamp("Q")
 
 
-def _dtcc_rates_cleared_column(columns):
+def _dtcc_rates_cleared_column(columns: pd.Index) -> str | None:
     """Return the like-for-like DTCC rates cleared-notional column if present."""
     preferred = "dtcc_rates_cleared_notional_pct"
     if preferred in columns:
@@ -114,7 +119,7 @@ def _dtcc_rates_cleared_column(columns):
 # ---------------------------------------------------------------------------
 
 
-def align_quarterly(sources):
+def align_quarterly(sources: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """Align all sources to a common quarterly DatetimeIndex (2013Q1+).
 
     Parameters
@@ -291,6 +296,51 @@ def align_quarterly(sources):
             dtcc_aligned.index.name = "date"
             frames["dtcc"] = dtcc_aligned
 
+    # --- 13F Holdings ---
+    if "13f" in sources and "report_period" in sources["13f"].columns:
+        f13 = sources["13f"].copy()
+        # Use value_usd if available, fall back to value_thousands * 1000
+        if "value_usd" in f13.columns:
+            f13["_value"] = pd.to_numeric(f13["value_usd"], errors="coerce")
+        elif "value_thousands" in f13.columns:
+            f13["_value"] = pd.to_numeric(f13["value_thousands"], errors="coerce") * 1000
+        else:
+            f13["_value"] = 0
+
+        f13["date"] = f13["report_period"].dt.to_period("Q").dt.to_timestamp("Q")
+
+        quarterly_13f = f13.groupby("date").agg(
+            **{
+                "13f_total_value_bn": ("_value", lambda x: x.sum() / 1e9),
+                "13f_fund_count": ("fund", "nunique"),
+                "13f_position_count": ("_value", "count"),
+            }
+        )
+
+        # Fund-level concentration per quarter
+        hhi_rows = []
+        for date, group in f13.groupby("date"):
+            if "fund" not in group.columns:
+                continue
+            fund_totals = group.groupby("fund")["_value"].sum()
+            total = fund_totals.sum()
+            if total > 0 and len(fund_totals) > 0:
+                shares = fund_totals / total
+                hhi = (shares**2).sum()
+                top10 = fund_totals.nlargest(min(10, len(fund_totals))).sum() / total
+                hhi_rows.append({"date": date, "13f_hhi": hhi, "13f_top10_share": top10})
+
+        if hhi_rows:
+            hhi_df = pd.DataFrame(hhi_rows).set_index("date")
+            quarterly_13f = quarterly_13f.join(hhi_df)
+
+        quarterly_13f.index.name = "date"
+        expected_13f = ["13f_total_value_bn", "13f_fund_count", "13f_position_count"]
+        missing = [c for c in expected_13f if c not in quarterly_13f.columns]
+        if missing:
+            warnings.warn(f"13F alignment: missing expected columns {missing}")
+        frames["13f"] = quarterly_13f
+
     if not frames:
         raise ValueError("No data sources could be loaded or aligned.")
 
@@ -316,7 +366,7 @@ def align_quarterly(sources):
 # ---------------------------------------------------------------------------
 
 
-def reconcile_z1_formpf(aligned):
+def reconcile_z1_formpf(aligned: pd.DataFrame) -> dict[str, object]:
     """Compare Z.1 total assets vs Form PF GAV.
 
     Returns dict with ratio statistics and leverage comparison.
@@ -380,7 +430,7 @@ def reconcile_z1_formpf(aligned):
 # ---------------------------------------------------------------------------
 
 
-def reconcile_cftc_dtcc(aligned):
+def reconcile_cftc_dtcc(aligned: pd.DataFrame) -> dict[str, object]:
     """Compare CFTC and DTCC cleared percentages if both are available."""
     result = {"source": "CFTC vs DTCC"}
 
@@ -416,7 +466,7 @@ def reconcile_cftc_dtcc(aligned):
 # ---------------------------------------------------------------------------
 
 
-def compute_cross_metrics(aligned):
+def compute_cross_metrics(aligned: pd.DataFrame) -> dict[str, object]:
     """Compute cross-source derived metrics and append to aligned DataFrame.
 
     Returns a copy of aligned with additional columns.
@@ -446,7 +496,14 @@ def compute_cross_metrics(aligned):
 # ---------------------------------------------------------------------------
 
 
-def _make_result(test_id, description, statistic=np.nan, p_value=np.nan, interpretation="", alpha=0.05):
+def _make_result(
+    test_id: str,
+    description: str,
+    statistic: float = np.nan,
+    p_value: float = np.nan,
+    interpretation: str = "",
+    alpha: float = 0.05,
+) -> dict[str, object]:
     """Build a standardised test-result dict."""
     if np.isnan(p_value):
         result_str = "N/A"
@@ -462,7 +519,7 @@ def _make_result(test_id, description, statistic=np.nan, p_value=np.nan, interpr
     }
 
 
-def test_adf_stationarity(series, name="series"):
+def test_adf_stationarity(series: pd.Series, name: str = "series") -> dict[str, object]:
     """Generic ADF stationarity test wrapper.
 
     Returns dict with test_name, statistic, p_value, interpretation.
@@ -485,7 +542,7 @@ def test_adf_stationarity(series, name="series"):
         return _make_result("ADF", f"ADF stationarity: {name}", interpretation=f"Error: {exc}")
 
 
-def test_mann_kendall(series, name="series"):
+def test_mann_kendall(series: pd.Series, name: str = "series") -> dict[str, object]:
     """Mann-Kendall trend test using scipy.stats.kendalltau.
 
     Correlates the series values against their integer index.
@@ -510,7 +567,7 @@ def test_mann_kendall(series, name="series"):
         return _make_result("MK", f"Mann-Kendall trend: {name}", interpretation=f"Error: {exc}")
 
 
-def test_h1_cointegration(aligned):
+def test_h1_cointegration(aligned: pd.DataFrame) -> dict[str, object]:
     """H1: Engle-Granger cointegration of Z.1 total assets and Form PF GAV."""
     test_id = "H1"
     desc = "Cointegration: Z.1 total assets ~ Form PF GAV"
@@ -531,7 +588,7 @@ def test_h1_cointegration(aligned):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h2_ratio_stability(aligned):
+def test_h2_ratio_stability(aligned: pd.DataFrame) -> dict[str, object]:
     """H2: Is the Z.1/Form PF GAV ratio stationary? (ADF test)."""
     test_id = "H2"
     desc = "Ratio stability: Z.1 total assets / Form PF GAV"
@@ -558,7 +615,7 @@ def test_h2_ratio_stability(aligned):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h3_cleared_pct_equivalence(aligned):
+def test_h3_cleared_pct_equivalence(aligned: pd.DataFrame) -> dict[str, object]:
     """H3: TOST equivalence test — CFTC and DTCC cleared % within 10pp."""
     test_id = "H3"
     desc = "Equivalence: CFTC vs DTCC cleared % (10pp margin)"
@@ -593,7 +650,7 @@ def test_h3_cleared_pct_equivalence(aligned):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h4_leverage_granger(aligned):
+def test_h4_leverage_granger(aligned: pd.DataFrame) -> dict[str, object]:
     """H4: Granger causality — Form PF GAV/NAV ratio -> Z.1 leverage."""
     test_id = "H4"
     desc = "Granger causality: Form PF GAV/NAV -> Z.1 leverage"
@@ -633,7 +690,7 @@ def test_h4_leverage_granger(aligned):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h5_fcm_leads_cot(aligned):
+def test_h5_fcm_leads_cot(aligned: pd.DataFrame) -> dict[str, object]:
     """H5: Cross-correlation of FCM customer seg growth vs COT net positioning growth."""
     test_id = "H5"
     desc = "Cross-corr: FCM customer seg growth vs COT net growth"
@@ -698,7 +755,7 @@ def test_h5_fcm_leads_cot(aligned):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h6_liquidity_vix(sources):
+def test_h6_liquidity_vix(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """H6: Does Form PF liquidity mismatch worsen when VIX > 30?
 
     Uses raw form_pf_liquidity.csv and vix data.
@@ -772,7 +829,7 @@ def test_h6_liquidity_vix(sources):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h7_concentration_correlation(sources):
+def test_h7_concentration_correlation(sources: dict[str, pd.DataFrame]) -> dict[str, object]:
     """H7: Spearman rank correlation between 13F and Form PF concentration."""
     test_id = "H7"
     desc = "Spearman corr: 13F vs Form PF top-fund concentration"
@@ -865,7 +922,7 @@ def test_h7_concentration_correlation(sources):
         return _make_result(test_id, desc, interpretation=f"Error: {exc}")
 
 
-def test_h8_vix_granger_leverage(aligned):
+def test_h8_vix_granger_leverage(aligned: pd.DataFrame) -> dict[str, object]:
     """H8: Granger causality — VIX -> Z.1 leverage change."""
     test_id = "H8"
     desc = "Granger causality: VIX -> Z.1 leverage change"
@@ -918,7 +975,7 @@ def test_h8_vix_granger_leverage(aligned):
 # ---------------------------------------------------------------------------
 
 
-def run_all_tests(aligned, sources):
+def run_all_tests(aligned: pd.DataFrame, sources: dict[str, pd.DataFrame]) -> list[dict[str, object]]:
     """Execute all hypothesis tests and return a summary DataFrame.
 
     Columns: test_id, description, statistic, p_value, result, interpretation.
@@ -969,7 +1026,7 @@ def run_all_tests(aligned, sources):
 # ---------------------------------------------------------------------------
 
 
-def run_full_analysis(save=True):
+def run_full_analysis(save: bool = True) -> dict[str, object]:
     """End-to-end cross-source analysis.
 
     1. Load all sources

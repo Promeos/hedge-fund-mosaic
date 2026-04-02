@@ -10,12 +10,23 @@ with all asset classes. Values are in millions USD.
 Data: ~600 weekly files (2013-2026).
 """
 
+from __future__ import annotations
+
 import os
 import re
+import warnings
 from datetime import datetime
 
 import openpyxl
 import pandas as pd
+
+
+def _validate_schema(df: pd.DataFrame, name: str, required_cols: list[str]) -> None:
+    """Warn if required columns are missing from a DataFrame before CSV export."""
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        warnings.warn(f"{name}: missing expected columns {missing}")
+
 
 ASSET_CLASS_PATTERNS = [
     (re.compile(r"total\s+interest\s+rate", re.IGNORECASE), "ir"),
@@ -30,7 +41,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "s
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed")
 
 
-def _extract_date_from_filename(filename):
+def _extract_date_from_filename(filename: str) -> datetime | None:
     """Extract date from CFTC_Swaps_Report_MM_DD_YYYY.xlsx"""
     name = filename.replace(".xlsx", "").replace("cftc_swaps_report_", "").replace("CFTC_Swaps_Report_", "")
     parts = name.split("_")
@@ -45,7 +56,7 @@ def _extract_date_from_filename(filename):
     return None
 
 
-def parse_overview_sheet(filepath):
+def parse_overview_sheet(filepath: str) -> pd.DataFrame:
     """Parse Sheet 1 (overview) — IR, Credit, FX notional with weekly columns.
 
     Returns a DataFrame with columns: date, metric, value (millions USD).
@@ -162,7 +173,7 @@ def parse_overview_sheet(filepath):
     return pd.DataFrame(records)
 
 
-def parse_all_swaps(data_dir=None, output_dir=None):
+def parse_all_swaps(data_dir: str | None = None, output_dir: str | None = None) -> None:
     """Parse all weekly swap reports and produce processed CSVs."""
     if data_dir is None:
         data_dir = DATA_DIR
@@ -171,13 +182,29 @@ def parse_all_swaps(data_dir=None, output_dir=None):
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # Resume support: load existing data and skip already-parsed file dates
+    long_path = os.path.join(output_dir, "swaps_weekly_long.csv")
+    existing_dates: set[str] = set()
+    existing_long = pd.DataFrame()
+    if os.path.exists(long_path):
+        existing_long = pd.read_csv(long_path, parse_dates=["date"])
+        existing_dates = set(existing_long["date"].dt.strftime("%Y-%m-%d"))
+        print(f"  Resuming: {len(existing_dates)} dates already parsed")
+
     files = sorted([f for f in os.listdir(data_dir) if f.endswith(".xlsx")])
     print(f"Parsing {len(files)} CFTC weekly swap reports...")
 
     all_records = []
     failed_files = []
+    skipped = 0
 
     for i, f in enumerate(files):
+        # Skip files whose date is already in existing data
+        file_date = _extract_date_from_filename(f)
+        if file_date and file_date.strftime("%Y-%m-%d") in existing_dates:
+            skipped += 1
+            continue
+
         filepath = os.path.join(data_dir, f)
         df = parse_overview_sheet(filepath)
 
@@ -190,12 +217,17 @@ def parse_all_swaps(data_dir=None, output_dir=None):
         if (i + 1) % 50 == 0:
             print(f"  [{i + 1}/{len(files)}] processed...")
 
-    if not all_records:
+    if skipped:
+        print(f"  Skipped {skipped}/{len(files)} files (already parsed)")
+
+    if not all_records and existing_long.empty:
         print("No swap data parsed!")
         return
 
-    # Combine all records and deduplicate (files contain overlapping weekly dates)
-    combined = pd.concat(all_records, ignore_index=True)
+    # Combine new + existing records and deduplicate (files contain overlapping weekly dates)
+    if not existing_long.empty:
+        all_records.insert(0, existing_long)
+    combined = pd.concat(all_records, ignore_index=True) if all_records else existing_long
     combined = combined.drop_duplicates(subset=["date", "metric"], keep="last")
     combined = combined.sort_values(["date", "metric"])
 
@@ -224,6 +256,7 @@ def parse_all_swaps(data_dir=None, output_dir=None):
     print(f"  Saved swaps_weekly.csv ({len(wide)} rows)")
 
     # --- Save long format ---
+    _validate_schema(combined, "swaps_weekly_long", ["date", "metric", "value_millions"])
     combined.to_csv(os.path.join(output_dir, "swaps_weekly_long.csv"), index=False)
     print(f"  Saved swaps_weekly_long.csv ({len(combined)} rows)")
 

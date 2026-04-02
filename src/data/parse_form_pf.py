@@ -10,6 +10,8 @@ concentration, strategy allocation, leverage distributions, notional exposures,
 liquidity, fair value hierarchy, geography, and sector data.
 """
 
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -20,7 +22,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "f
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed")
 
 
-def _find_latest_excel(data_dir):
+def _find_latest_excel(data_dir: str) -> str | None:
     """Find the most recent Form PF Excel file (contains full history)."""
     files = sorted([f for f in os.listdir(data_dir) if f.endswith(".xlsx")])
     if not files:
@@ -28,7 +30,7 @@ def _find_latest_excel(data_dir):
     return os.path.join(data_dir, files[-1])
 
 
-def parse_simple_table(filepath, sheet_name, label_col="label"):
+def parse_simple_table(filepath: str, sheet_name: str, label_col: str = "label") -> pd.DataFrame:
     """Parse a sheet with one label column and quarterly/monthly date columns.
 
     Layout: Row 0 = headers (label_name, date1, date2, ...)
@@ -58,7 +60,7 @@ def parse_simple_table(filepath, sheet_name, label_col="label"):
     return df
 
 
-def parse_two_level_table(filepath, sheet_name, col_names=None):
+def parse_two_level_table(filepath: str, sheet_name: str, col_names: list[str] | None = None) -> pd.DataFrame:
     """Parse a sheet with two label columns and date columns.
 
     Layout: Row 0 = headers (col1_name, col2_name, date1, date2, ...)
@@ -89,7 +91,7 @@ def parse_two_level_table(filepath, sheet_name, col_names=None):
     return df
 
 
-def _melt_quarterly(df, label_col="label", value_name="value"):
+def _melt_quarterly(df: pd.DataFrame, label_col: str = "label", value_name: str = "value") -> pd.DataFrame:
     """Melt a wide quarterly table to long format with quarter column."""
     date_cols = [c for c in df.columns if c != label_col and str(c).startswith("20")]
     melted = df.melt(id_vars=[label_col], value_vars=date_cols, var_name="quarter", value_name=value_name)
@@ -97,7 +99,7 @@ def _melt_quarterly(df, label_col="label", value_name="value"):
     return melted
 
 
-def _melt_monthly(df, label_col="label", value_name="value"):
+def _melt_monthly(df: pd.DataFrame, label_col: str = "label", value_name: str = "value") -> pd.DataFrame:
     """Melt a wide monthly table to long format with month column."""
     date_cols = [c for c in df.columns if c != label_col and str(c).startswith("20")]
     melted = df.melt(id_vars=[label_col], value_vars=date_cols, var_name="month", value_name=value_name)
@@ -105,10 +107,12 @@ def _melt_monthly(df, label_col="label", value_name="value"):
     return melted
 
 
-def _melt_two_level(df, col1, col2, value_name="value", time_col="month"):
+def _melt_two_level(
+    df: pd.DataFrame, level1_col: str, level2_col: str, value_name: str = "value", time_col: str = "quarter"
+) -> pd.DataFrame:
     """Melt a two-level wide table to long format."""
-    date_cols = [c for c in df.columns if c not in [col1, col2] and str(c).startswith("20")]
-    melted = df.melt(id_vars=[col1, col2], value_vars=date_cols, var_name=time_col, value_name=value_name)
+    date_cols = [c for c in df.columns if c not in [level1_col, level2_col] and str(c).startswith("20")]
+    melted = df.melt(id_vars=[level1_col, level2_col], value_vars=date_cols, var_name=time_col, value_name=value_name)
     melted[value_name] = pd.to_numeric(melted[value_name], errors="coerce")
     return melted
 
@@ -118,7 +122,7 @@ def _melt_two_level(df, col1, col2, value_name="value", time_col="month"):
 # ---------------------------------------------------------------------------
 
 
-def parse_fund_counts(filepath):
+def parse_fund_counts(filepath: str) -> pd.DataFrame:
     """Tab.1.1-1.4: Number of funds by type (quarterly)."""
     dfs = []
     for tab in ["Tab.1.1", "Tab.1.2", "Tab.1.3", "Tab.1.4"]:
@@ -137,7 +141,7 @@ def parse_fund_counts(filepath):
     return _melt_quarterly(df, label_col="fund_type", value_name="count")
 
 
-def parse_gav_nav(filepath):
+def parse_gav_nav(filepath: str) -> pd.DataFrame:
     """Tab.2.1 (GAV), Tab.2.3 (NAV), Tab.2.5 (other) — quarterly, billions USD."""
     results = []
 
@@ -160,7 +164,7 @@ def parse_gav_nav(filepath):
     return merged
 
 
-def parse_borrowing(filepath):
+def parse_borrowing(filepath: str) -> dict[str, pd.DataFrame]:
     """Tab.2.9, 2.13 (quarterly), Tab.8.27 (monthly detail), Tab.8.34 (quarterly creditor)."""
     parts = []
 
@@ -191,7 +195,7 @@ def parse_borrowing(filepath):
     }
 
 
-def parse_derivatives(filepath):
+def parse_derivatives(filepath: str) -> pd.DataFrame:
     """Tab.5.1 (derivative value), Tab.5.3 (derivatives as % of NAV) — quarterly."""
     # Tab.5.1
     df1 = parse_simple_table(filepath, "Tab.5.1", label_col="fund_type")
@@ -205,7 +209,7 @@ def parse_derivatives(filepath):
     return merged
 
 
-def parse_concentration(filepath):
+def parse_concentration(filepath: str) -> pd.DataFrame:
     """Tab.6.3-6.6: Top N fund share of NAV, GAV, borrowing, derivatives — quarterly."""
     tabs = {
         "Tab.6.3": "nav_share",
@@ -234,7 +238,7 @@ def parse_concentration(filepath):
     return merged
 
 
-def parse_strategy(filepath):
+def parse_strategy(filepath: str) -> pd.DataFrame:
     """Tab.8.7-8.15: Strategy allocation — GAV, NAV, borrowing, derivatives by strategy."""
     parts = []
 
@@ -280,7 +284,7 @@ def parse_strategy(filepath):
     return merged
 
 
-def parse_leverage_distribution(filepath):
+def parse_leverage_distribution(filepath: str) -> pd.DataFrame:
     """Tab.8.1-8.6: GNE/LNE/SNE ratio distributions (monthly, fund counts per bucket)."""
     tabs = {
         "Tab.8.1": "GNE",
@@ -306,7 +310,7 @@ def parse_leverage_distribution(filepath):
     return pd.concat(results, ignore_index=True)
 
 
-def parse_notional(filepath):
+def parse_notional(filepath: str) -> pd.DataFrame:
     """Tab.8.16 (long notional), Tab.8.17 (short notional) — monthly, by investment type."""
     # Tab.8.16 = Long notional
     df_long = parse_simple_table(filepath, "Tab.8.16", label_col="investment_type")
@@ -322,7 +326,7 @@ def parse_notional(filepath):
     return merged
 
 
-def parse_liquidity(filepath):
+def parse_liquidity(filepath: str) -> pd.DataFrame:
     """Tab.8.22 (investor liquidity), Tab.8.23 (portfolio liquidity), Tab.8.33 (financing)."""
     tabs = {
         "Tab.8.22": "investor_liquidity",
@@ -345,7 +349,7 @@ def parse_liquidity(filepath):
     return pd.concat(results, ignore_index=True)
 
 
-def parse_fair_value(filepath):
+def parse_fair_value(filepath: str) -> pd.DataFrame:
     """Tab.2.14-2.23: Fair value hierarchy (Level 1/2/3 assets & liabilities)."""
     results = []
     for i in range(14, 24):
@@ -364,7 +368,7 @@ def parse_fair_value(filepath):
     return pd.concat(results, ignore_index=True)
 
 
-def parse_geography(filepath):
+def parse_geography(filepath: str) -> pd.DataFrame:
     """Tab.3.1-3.2: Geographic distribution (two-level: fund_universe + country)."""
     results = []
     for tab in ["Tab.3.1", "Tab.3.2"]:
@@ -382,7 +386,7 @@ def parse_geography(filepath):
     return pd.concat(results, ignore_index=True)
 
 
-def parse_sector(filepath):
+def parse_sector(filepath: str) -> pd.DataFrame:
     """Tab.10.1-10.6: Industry/sector allocation (annual, Q4 only)."""
     results = []
     for i in range(1, 7):
@@ -406,7 +410,13 @@ def parse_sector(filepath):
 # ---------------------------------------------------------------------------
 
 
-def compute_form_pf_metrics(gav_nav_df, concentration_df, notional_df, liquidity_df, strategy_df):
+def compute_form_pf_metrics(
+    gav_nav_df: pd.DataFrame,
+    concentration_df: pd.DataFrame,
+    notional_df: pd.DataFrame,
+    liquidity_df: pd.DataFrame,
+    strategy_df: pd.DataFrame,
+) -> dict[str, object]:
     """Compute derived metrics from parsed Form PF data."""
     metrics = {}
 
@@ -483,7 +493,7 @@ def compute_form_pf_metrics(gav_nav_df, concentration_df, notional_df, liquidity
 # ---------------------------------------------------------------------------
 
 
-def parse_all_form_pf(data_dir=None, output_dir=None):
+def parse_all_form_pf(data_dir: str | None = None, output_dir: str | None = None) -> None:
     """Parse all Form PF data and produce processed CSVs."""
     if data_dir is None:
         data_dir = DATA_DIR
